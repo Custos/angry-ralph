@@ -63,12 +63,35 @@ For Self-Reflection tier: run claude only. No retry needed (claude is always ava
 
 For plan review:
 ```bash
-gemini -p "You are a senior architect performing adversarial review. The implementation plan is at $(pwd)/planning/angry-ralph-plan.md. Read it thoroughly. Find logic flaws, security vulnerabilities, missing edge cases, and systemic breaking points. Ask questions about anything ambiguous. Output your findings as structured markdown with ## Findings (using [CRITICAL], [WARNING], [INFO] prefixes), ## Questions, and ## Summary headers." --approval-mode plan -o text
+gemini -p "You are a senior architect performing adversarial review. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
+
+METHODOLOGY:
+1. For every file path, function name, or dependency the plan references, verify it actually exists in the project. Flag phantom references.
+2. For every step, trace the FAILURE path: what happens when this step fails? Is there recovery or does the pipeline silently break?
+3. Identify assumptions the plan makes but never validates (e.g., 'the test runner will detect failures' — does the actual test harness do this?).
+4. Check for drift between what existing code/docs claim and what is actually implemented. Read the code, not just the docs.
+5. Read individual scripts and functions the plan depends on. Verify they do what the plan assumes they do.
+
+The implementation plan is at $(pwd)/planning/angry-ralph-plan.md. Read it, then read the files it references.
+
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --approval-mode plan -o text
 ```
 
 For final code review:
 ```bash
-gemini -p "You are a senior architect. Review the codebase at $(pwd) for integration bugs, emergent security vulnerabilities, and gaps between the plan at planning/angry-ralph-plan.md and the actual implementation. Output your findings as structured markdown with ## Findings (using [CRITICAL], [WARNING], [INFO] prefixes), ## Questions, and ## Summary headers." --approval-mode plan -o text
+gemini -p "You are a senior architect performing adversarial integration review. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
+
+METHODOLOGY:
+1. Read individual scripts, functions, and modules. Verify each one actually implements what its docs/comments claim.
+2. For every error handling path, trace what happens: does the error propagate correctly or get silently swallowed?
+3. Check for drift: where do README, protocol docs, or inline comments say one thing but code does another?
+4. Verify cross-file dependencies: if module A calls module B, does B actually export/accept what A expects?
+5. Test edge cases by reading code, not docs: empty inputs, missing files, malformed data, permission errors.
+6. Check that referenced file paths, CLI flags, and environment variables actually exist and work as documented.
+
+The plan is at $(pwd)/planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
+
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --approval-mode plan -o text
 ```
 
 - Use `--approval-mode plan` to enforce read-only operation.
@@ -78,12 +101,35 @@ gemini -p "You are a senior architect. Review the codebase at $(pwd) for integra
 
 For plan review:
 ```bash
-codex exec "You are a senior architect performing adversarial review. Read the implementation plan at planning/angry-ralph-plan.md. Find logic flaws, security vulnerabilities, missing edge cases, and systemic breaking points. Ask questions about anything ambiguous. Output your findings as structured markdown with ## Findings (using [CRITICAL], [WARNING], [INFO] prefixes), ## Questions, and ## Summary headers." -C "$(pwd)" --sandbox read-only -o planning/reviews/iteration-N/codex-review.md
+codex exec "You are a senior architect performing adversarial review. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
+
+METHODOLOGY:
+1. For every file path, function name, or dependency the plan references, verify it actually exists in the project. Flag phantom references.
+2. For every step, trace the FAILURE path: what happens when this step fails? Is there recovery or does the pipeline silently break?
+3. Identify assumptions the plan makes but never validates (e.g., 'the test runner will detect failures' — does the actual test harness do this?).
+4. Check for drift between what existing code/docs claim and what is actually implemented. Read the code, not just the docs.
+5. Read individual scripts and functions the plan depends on. Verify they do what the plan assumes they do.
+
+The implementation plan is at planning/angry-ralph-plan.md. Read it, then read the files it references.
+
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." -C "$(pwd)" --sandbox read-only -o planning/reviews/iteration-N/codex-review.md
 ```
 
 For final code review:
 ```bash
-codex exec "You are a senior architect. Review this codebase for integration bugs, emergent security vulnerabilities, and gaps between planning/angry-ralph-plan.md and the implementation. Output your findings as structured markdown with ## Findings (using [CRITICAL], [WARNING], [INFO] prefixes), ## Questions, and ## Summary headers." -C "$(pwd)" --sandbox read-only -o planning/reviews/final/codex-review.md
+codex exec "You are a senior architect performing adversarial integration review. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
+
+METHODOLOGY:
+1. Read individual scripts, functions, and modules. Verify each one actually implements what its docs/comments claim.
+2. For every error handling path, trace what happens: does the error propagate correctly or get silently swallowed?
+3. Check for drift: where do README, protocol docs, or inline comments say one thing but code does another?
+4. Verify cross-file dependencies: if module A calls module B, does B actually export/accept what A expects?
+5. Test edge cases by reading code, not docs: empty inputs, missing files, malformed data, permission errors.
+6. Check that referenced file paths, CLI flags, and environment variables actually exist and work as documented.
+
+The plan is at planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
+
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." -C "$(pwd)" --sandbox read-only -o planning/reviews/final/codex-review.md
 ```
 
 - Use `--sandbox read-only` to prevent filesystem writes outside the output file.
@@ -93,12 +139,39 @@ codex exec "You are a senior architect. Review this codebase for integration bug
 
 For plan review:
 ```bash
-claude -p "You are a senior architect performing adversarial review. You are acting as an independent reviewer in a SEPARATE session with NO prior context. Read the implementation plan at $(pwd)/planning/angry-ralph-plan.md thoroughly. Find logic flaws, security vulnerabilities, missing edge cases, and systemic breaking points. Ask questions about anything ambiguous. Be rigorous — your job is to find problems, not validate the work. Output your findings as structured markdown with ## Findings (using [CRITICAL], [WARNING], [INFO] prefixes), ## Questions, and ## Summary headers." --output-format text
+claude -p "You are a senior architect performing adversarial review in a SEPARATE session with NO prior context. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
+
+METHODOLOGY:
+1. For every file path, function name, or dependency the plan references, verify it actually exists in the project. Flag phantom references.
+2. For every step, trace the FAILURE path: what happens when this step fails? Is there recovery or does the pipeline silently break?
+3. Identify assumptions the plan makes but never validates (e.g., 'the test runner will detect failures' — does the actual test harness do this?).
+4. Check for drift between what existing code/docs claim and what is actually implemented. Read the code, not just the docs.
+5. Read individual scripts and functions the plan depends on. Verify they do what the plan assumes they do.
+
+Be rigorous — you are an independent reviewer, not a validator.
+
+The implementation plan is at $(pwd)/planning/angry-ralph-plan.md. Read it, then read the files it references.
+
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --output-format text
 ```
 
 For final code review:
 ```bash
-claude -p "You are a senior architect performing an independent integration review with NO prior context on this project. Review the codebase at $(pwd) for integration bugs, emergent security vulnerabilities, and gaps between the plan at $(pwd)/planning/angry-ralph-plan.md and the actual implementation. Be rigorous — your job is to find problems, not validate the work. Output your findings as structured markdown with ## Findings (using [CRITICAL], [WARNING], [INFO] prefixes), ## Questions, and ## Summary headers." --output-format text
+claude -p "You are a senior architect performing adversarial integration review in a SEPARATE session with NO prior context. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
+
+METHODOLOGY:
+1. Read individual scripts, functions, and modules. Verify each one actually implements what its docs/comments claim.
+2. For every error handling path, trace what happens: does the error propagate correctly or get silently swallowed?
+3. Check for drift: where do README, protocol docs, or inline comments say one thing but code does another?
+4. Verify cross-file dependencies: if module A calls module B, does B actually export/accept what A expects?
+5. Test edge cases by reading code, not docs: empty inputs, missing files, malformed data, permission errors.
+6. Check that referenced file paths, CLI flags, and environment variables actually exist and work as documented.
+
+Be rigorous — you are an independent reviewer, not a validator.
+
+The plan is at $(pwd)/planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
+
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --output-format text
 ```
 
 - The `--output-format text` flag ensures plain text output.
