@@ -20,7 +20,17 @@ Run the environment validation script before proceeding with any phase:
 ${CLAUDE_PLUGIN_ROOT}/scripts/checks/validate-env.sh
 ```
 
-This verifies that `gemini`, `codex`, and `git` are available in PATH. If validation fails, halt and report the missing tools to the user. Do not proceed with any phase until all tools pass.
+This verifies that required tools (`git`, `python3`, `claude`) are in PATH and detects optional external reviewers (`gemini`, `codex`). If required tools are missing, halt and report the error. The script outputs JSON to stdout with the detected `review_tier` and `available_reviewers` — store these in `planning/config.json` for use during review phases.
+
+**Review Tiers:**
+
+| Tier | Condition | Reviewers |
+|------|-----------|-----------|
+| **Adversarial** | gemini + codex available | gemini, codex |
+| **Partial** | one external CLI available | available CLI + claude fallback |
+| **Self-Reflection** | no external CLIs | claude only (fresh session) |
+
+The plugin works out-of-the-box with zero external CLIs. External tools upgrade the review quality but are not required.
 
 ### Git Repository
 
@@ -67,9 +77,18 @@ Consult `references/planning-protocol.md` for the plan structure, section format
 
 ## Phase 3: ADVERSARIAL REVIEW
 
-Spawn the `external-reviewer` subagent to invoke `gemini` and `codex` CLIs against the plan. Before each iteration, create the review output directory: `planning/reviews/iteration-N/`.
+### Transparency
 
-The subagent produces structured markdown with `## Findings` (tagged `[CRITICAL]`, `[WARNING]`, `[INFO]`), `## Questions`, and `## Summary`.
+Before beginning the review loop, print the active review tier to inform the user:
+
+```
+angry-ralph: Review tier — <TIER_LABEL>
+Reviewers: <comma-separated list of active reviewers>
+```
+
+Read the `review_tier` and `available_reviewers` from `planning/config.json` to determine which reviewers to use. Spawn the `external-reviewer` subagent, passing the active tier and available reviewers in the prompt. Before each iteration, create the review output directory: `planning/reviews/iteration-N/`.
+
+The subagent produces structured markdown with `## Findings` (tagged with source attribution `[Gemini]`, `[Codex]`, or `[Claude-Reflection]` AND severity `[CRITICAL]`, `[WARNING]`, `[INFO]`), `## Questions`, and `## Summary`.
 
 ### Triage Decision Tree
 
@@ -178,12 +197,16 @@ Consult `references/loop-protocol.md` for state file format, loop lifecycle, sec
 
 Initiate final review only after every implementation section has been completed and committed with all tests passing.
 
+### Transparency
+
+Print the active review tier before spawning the reviewer, same as Phase 3.
+
 ### Procedure
 
 1. Create the final review directory: `mkdir -p planning/reviews/final/`
 2. Spawn the `external-reviewer` subagent with review type set to `"final integration review"`.
-3. Provide the subagent with the project directory path, plan file path, and sections directory.
-4. The subagent invokes `gemini` and `codex` over the full codebase, focusing on integration bugs, emergent security vulnerabilities, plan-vs-code gaps, and missing error handling.
+3. Provide the subagent with the active review tier, available reviewers, project directory path, plan file path, and sections directory.
+4. The subagent invokes the available reviewers based on the active tier, focusing on integration bugs, emergent security vulnerabilities, plan-vs-code gaps, and missing error handling. All findings are tagged with their source (`[Gemini]`, `[Codex]`, or `[Claude-Reflection]`).
 
 ### Triage
 
@@ -274,7 +297,7 @@ After a `/clear` command resets conversation context:
 All detailed procedures are defined in the reference protocol files. Consult these for step-by-step instructions, decision trees, and rules that govern each phase:
 
 - **`references/planning-protocol.md`** -- Decomposition and plan writing procedures. Covers the full interview process, splitting heuristics, plan structure with section format, and the quality checklist.
-- **`references/review-protocol.md`** -- Adversarial review loop and triage rules. Defines CLI invocation patterns for gemini and codex, the structured review output format, the triage decision tree, and iteration control logic.
+- **`references/review-protocol.md`** -- Review loop and triage rules. Defines review tier detection, CLI invocation patterns for gemini, codex, and claude fallback, source attribution tags, the triage decision tree, and iteration control logic.
 - **`references/tdd-protocol.md`** -- Test-driven development enforcement. Specifies the red-green cycle, test command detection, definition of "tests pass," completion promise rules, and handling of test failures and flaky tests.
 - **`references/loop-protocol.md`** -- Ralph Loop state machine and lifecycle. Documents the state file format, field definitions, loop activation, section-to-section transitions, atomic commit rules, and the cancel mechanism.
 - **`references/final-review-protocol.md`** -- Integration review procedure. Covers trigger conditions, CLI review focus areas, triage logic, post-triage actions, and pipeline completion reporting.

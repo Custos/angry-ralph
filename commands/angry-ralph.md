@@ -38,7 +38,9 @@ Run the environment validation script via the Bash tool:
 ${CLAUDE_PLUGIN_ROOT}/scripts/checks/validate-env.sh
 ```
 
-If the script exits with a non-zero code, report the validation error to the user and stop. Do not proceed to any subsequent step.
+If the script exits with a non-zero code, report the validation error to the user and stop (this means a required tool like `git`, `python3`, or `claude` is missing). Do not proceed to any subsequent step.
+
+If the script succeeds, capture its JSON stdout output. This contains `review_tier` and `available_reviewers` which determine which review tier is active. Store these values for inclusion in `planning/config.json` during setup.
 
 Confirm the current working directory is inside a git repository by running:
 
@@ -83,11 +85,13 @@ Initialize the session config file at `${SPEC_DIR}/planning/config.json`:
   "max_review_iterations": <N>,
   "started_at": "<ISO 8601 timestamp>",
   "current_phase": "decompose",
-  "completed_phases": []
+  "completed_phases": [],
+  "review_tier": "<adversarial|partial|self-reflection>",
+  "available_reviewers": ["<list from validate-env output>"]
 }
 ```
 
-Use actual resolved values for `spec_file`, `max_review_iterations`, and `started_at`.
+Use actual resolved values for all fields. The `review_tier` and `available_reviewers` come from the JSON output of the environment validation script.
 
 ## 5. Handoff to Skill
 
@@ -95,7 +99,7 @@ The angry-ralph skill handles the full 6-phase workflow. Create task list items 
 
 1. **Phase 1: DECOMPOSE** -- Read spec, interview user, identify planning units
 2. **Phase 2: PLAN** -- Write detailed implementation plan with sections
-3. **Phase 3: ADVERSARIAL REVIEW** -- External LLM review via gemini and codex
+3. **Phase 3: REVIEW** -- LLM review via available reviewers (tier-dependent)
 4. **Phase 4: SPLIT** -- Parse plan into section specs
 5. **Phase 5: EXECUTE** -- TDD Ralph Loop for each section
 6. **Phase 6: FINAL REVIEW** -- Integration review of completed codebase

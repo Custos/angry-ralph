@@ -3,18 +3,48 @@
 This reference governs Phase 3 of the angry-ralph workflow. It defines how to spawn
 external reviewers, triage their feedback, and iterate until the plan is solid.
 
+## Review Tier Detection
+
+Before the first review iteration, determine the active review tier from the environment
+validation output stored in `planning/config.json`:
+
+| Tier | Condition | Reviewers Used |
+|------|-----------|----------------|
+| **Adversarial** | gemini + codex available | gemini, codex |
+| **Partial** | one external CLI available | available CLI + claude fallback |
+| **Self-Reflection** | no external CLIs | claude only |
+
+### Transparency Message
+
+Print the following message before beginning the review loop:
+
+```
+angry-ralph: Review tier — <TIER_LABEL>
+Reviewers: <comma-separated list of active reviewers>
+```
+
+Example outputs:
+- `angry-ralph: Review tier — Adversarial (gemini + codex)`
+- `angry-ralph: Review tier — Partial (codex + claude fallback)`
+- `angry-ralph: Review tier — Self-Reflection (claude only)`
+
 ## Spawning the External Reviewer
 
 Spawn the `external-reviewer` subagent via the Task tool with `subagent_type`
 set to `external-reviewer`. The subagent has access to **Bash and Read tools only** --
-it invokes the `gemini` and `codex` CLIs to perform adversarial review. It cannot
-modify any files.
+it invokes the available CLIs to perform review. It cannot modify any files.
+
+When spawning, include in the prompt:
+- The active review tier
+- Which reviewers are available (from `config.json` `available_reviewers` field)
+- The review type (plan review or final integration review)
+- File paths to review artifacts
 
 ### CLI Invocation Rules
 
-Pass file paths as arguments to both CLIs. **Never pipe content via stdin.**
+Pass file paths as arguments to all CLIs. **Never pipe content via stdin.**
 
-#### Gemini Invocation
+#### Gemini Invocation (when available)
 
 ```
 gemini -p "<review prompt referencing file paths>" --approval-mode plan -o text
@@ -24,7 +54,7 @@ gemini -p "<review prompt referencing file paths>" --approval-mode plan -o text
 - Use `-o text` to capture plain text output.
 - Reference the plan file by absolute path: `$(pwd)/planning/angry-ralph-plan.md`.
 
-#### Codex Invocation
+#### Codex Invocation (when available)
 
 ```
 codex exec "<review prompt referencing file paths>" -C "$(pwd)" --sandbox read-only -o <output-file>
@@ -34,13 +64,28 @@ codex exec "<review prompt referencing file paths>" -C "$(pwd)" --sandbox read-o
 - Use `-C "$(pwd)"` to set the working directory.
 - Write output to `planning/reviews/iteration-N/codex-review.md`.
 
+#### Claude Fallback Invocation (when used)
+
+```
+claude -p "<review prompt referencing file paths>" --output-format text
+```
+
+- Use `--output-format text` to get plain text output.
+- The prompt must explicitly state "separate session" and "no prior context" to maximize independence.
+- Write output to `planning/reviews/iteration-N/claude-review.md`.
+
 ## Review Output Format
 
-Instruct both CLIs to produce structured markdown with these sections:
+Instruct all CLIs to produce structured markdown with these sections:
 
 ### `## Findings`
 
-Each finding prefixed with a severity tag:
+Each finding prefixed with a severity tag AND a source attribution tag:
+- `[Gemini] [CRITICAL]` -- Critical finding from Gemini.
+- `[Codex] [WARNING]` -- Warning from Codex.
+- `[Claude-Reflection] [INFO]` -- Informational note from Claude fallback.
+
+Severity levels:
 - `[CRITICAL]` -- Blocking issues that must be fixed before proceeding.
 - `[WARNING]` -- Potential risks that warrant evaluation.
 - `[INFO]` -- Observations and suggestions for awareness only.
@@ -48,6 +93,7 @@ Each finding prefixed with a severity tag:
 ### `## Questions`
 
 Ambiguities, missing context, or unclear requirements identified by the reviewer.
+Each question tagged with its source: `[Gemini]`, `[Codex]`, or `[Claude-Reflection]`.
 
 ### `## Summary`
 
@@ -62,12 +108,14 @@ mkdir -p planning/reviews/iteration-N/
 ```
 
 Store review outputs at:
-- `planning/reviews/iteration-N/gemini-review.md` -- Gemini output (capture from stdout).
-- `planning/reviews/iteration-N/codex-review.md` -- Codex output (written by `-o` flag).
+- `planning/reviews/iteration-N/gemini-review.md` -- Gemini output (when available).
+- `planning/reviews/iteration-N/codex-review.md` -- Codex output (when available).
+- `planning/reviews/iteration-N/claude-review.md` -- Claude fallback output (when used).
 
 For the final review (Phase 6), store in:
 - `planning/reviews/final/gemini-review.md`
 - `planning/reviews/final/codex-review.md`
+- `planning/reviews/final/claude-review.md`
 
 ## Triage Decision Tree
 
@@ -90,6 +138,10 @@ After receiving the review payload, process each finding and question as follows
 
 5. **[INFO] items** -- Note for awareness. Do not block on these. Optionally
    incorporate useful suggestions into the plan.
+
+When triaging, note the source attribution tag on each finding. Findings from
+external models (Gemini, Codex) carry higher adversarial confidence than
+Claude-Reflection findings, which may share blind spots with the planning session.
 
 ## Iteration Control
 
@@ -116,7 +168,7 @@ if iteration == max_iterations:
 
 Exit the loop early when a review iteration returns zero CRITICAL findings,
 zero WARNING findings, and zero unresolved questions. This indicates the plan
-has passed adversarial scrutiny.
+has passed review scrutiny.
 
 ### Max Iterations Reached
 
@@ -127,7 +179,7 @@ the user with the remaining open items and ask whether to:
 
 ## Hard Rule -- No Guessing
 
-If ANY question from Gemini or Codex reveals a genuine information gap that
+If ANY question from a reviewer reveals a genuine information gap that
 cannot be resolved from available context (the spec, the plan, the codebase,
 or prior user answers), use AskUserQuestion. No guessing. No fabricating.
 No "I'll assume..." phrasing. Pause and wait for the user.
