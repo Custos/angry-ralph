@@ -58,6 +58,8 @@ Create task list items for each planning unit to enable checkpoint tracking.
 
 Consult `references/planning-protocol.md` for the detailed decomposition procedure, interview rules, and splitting heuristics.
 
+When Phase 1 is complete, update `planning/config.json`: set `current_phase` to `"plan"` and append `"decompose"` to `completed_phases`.
+
 ## Phase 2: PLAN
 
 Write a detailed implementation plan for each planning unit. The plan must include:
@@ -75,6 +77,8 @@ Write the complete plan to `planning/angry-ralph-plan.md`. Write a synthesized s
 Run the plan quality checklist before marking Phase 2 complete: verify every component has a section, every section has test specs, section dependencies form a valid DAG, the test runner command is consistent, error handling covers all boundaries, and the synthesized spec reflects all interview answers.
 
 Consult `references/planning-protocol.md` for the plan structure, section format, and quality checklist.
+
+When Phase 2 is complete, update `planning/config.json`: set `current_phase` to `"review"` and append `"plan"` to `completed_phases`.
 
 ## Phase 3: ADVERSARIAL REVIEW
 
@@ -111,6 +115,8 @@ Track iteration count against `--max-review-iterations` (default 3). Exit the re
 
 Consult `references/review-protocol.md` for the triage decision tree, CLI invocation patterns, and iteration control logic.
 
+When Phase 3 is complete, update `planning/config.json`: set `current_phase` to `"split"` and append `"review"` to `completed_phases`.
+
 ## Phase 4: SPLIT
 
 Parse the finalized plan into numbered section markdown specs. Each section spec must be self-contained and include:
@@ -142,6 +148,8 @@ Write a section manifest to `planning/sections/index.md` listing all sections in
 - Status (initially `pending` for all)
 
 The manifest serves as the single source of truth for section ordering and completion tracking.
+
+When Phase 4 is complete, update `planning/config.json`: set `current_phase` to `"execute"` and append `"split"` to `completed_phases`.
 
 ## Phase 5: EXECUTE (Ralph Loop + TDD)
 
@@ -226,6 +234,8 @@ Consult `references/tdd-protocol.md` for TDD red-green cycle rules, test command
 
 Consult `references/loop-protocol.md` for state file format, loop lifecycle, section transitions, and atomic commit rules.
 
+When Phase 5 is complete (all sections executed), update `planning/config.json`: set `current_phase` to `"final_review"` and append `"execute"` to `completed_phases`.
+
 ## Phase 6: FINAL REVIEW
 
 Initiate final review only after every implementation section has been completed and committed with all tests passing.
@@ -259,7 +269,7 @@ When `max_review_iterations` is exhausted with findings still open:
 
 Produce a summary report at `planning/reviews/final/review-summary.md`: total iterations, findings per severity, fixes with commits, unresolved items.
 
-Deactivate the state file by setting `active=false` or removing it entirely. Report full pipeline completion to the user. List every commit made during the session in chronological order.
+Deactivate the state file by setting `active=false` or removing it entirely. Update `planning/config.json`: set `current_phase` to `"complete"` and append `"final_review"` to `completed_phases`. Report full pipeline completion to the user. List every commit made during the session in chronological order.
 
 Consult `references/final-review-protocol.md` for the complete final review loop, triage decision tree, fix rules, and completion steps.
 
@@ -289,6 +299,30 @@ Store session configuration in `planning/config.json` for resume support. Includ
 - Pipeline start timestamp
 - Current phase at time of last checkpoint
 - List of completed phases
+
+### Phase Transition Tracking
+
+**At the start of each phase**, update `planning/config.json`:
+- Set `current_phase` to the phase name (`decompose`, `plan`, `review`, `split`, `execute`, `final_review`)
+
+**At the end of each phase**, update `planning/config.json`:
+- Append the completed phase name to the `completed_phases` array
+
+**At pipeline completion** (end of Phase 6), set `current_phase` to `"complete"`.
+
+This tracking is critical for resume detection and must happen at every phase boundary. Use python3 for JSON updates:
+
+```bash
+python3 -c "
+import json
+with open('planning/config.json', 'r') as f:
+    cfg = json.load(f)
+cfg['current_phase'] = '<phase_name>'
+cfg['completed_phases'].append('<previous_phase>')
+with open('planning/config.json', 'w') as f:
+    json.dump(cfg, f, indent=2)
+"
+```
 
 ### Task List
 

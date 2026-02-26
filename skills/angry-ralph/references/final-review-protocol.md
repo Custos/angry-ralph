@@ -128,5 +128,6 @@ After the loop exits (clean or capped), produce a summary report at `planning/re
 After the final review loop and any resulting fixes:
 
 1. Deactivate the state file by setting `active=false` (or remove it entirely).
-2. Report full pipeline completion to the user.
-3. List every commit made during the session, in chronological order.
+2. Update `planning/config.json`: set `current_phase` to `"complete"` and append `"final_review"` to `completed_phases`.
+3. Report full pipeline completion to the user.
+4. List every commit made during the session, in chronological order.
