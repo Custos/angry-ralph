@@ -1,0 +1,103 @@
+---
+name: angry-ralph
+description: Start the angry-ralph unified planning and execution pipeline
+hide-from-slash-command-tool: "true"
+---
+
+# /angry-ralph Command
+
+When the user invokes `/angry-ralph`, execute the following steps in order.
+
+## 1. Argument Parsing
+
+Parse the invocation arguments:
+
+- **`@file.md`** (required) -- The input specification file. This is the `@`-prefixed file reference provided by the user.
+- **`--max-review-iterations N`** (optional, default: `3`) -- Maximum adversarial review iterations for Phase 3 and Phase 6.
+
+If no `@file.md` argument is provided, report an error and display usage:
+
+```
+Error: No spec file provided.
+
+Usage: /angry-ralph @spec-file.md [--max-review-iterations N]
+
+  @spec-file.md              Path to the input specification file (required)
+  --max-review-iterations N  Max review loop iterations (default: 3)
+```
+
+Stop execution after displaying usage.
+
+Validate that the referenced spec file exists and is readable. Resolve its absolute path and store it as `SPEC_FILE`. Derive `SPEC_DIR` as the directory containing the spec file.
+
+## 2. Environment Validation
+
+Run the environment validation script via the Bash tool:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/checks/validate-env.sh
+```
+
+If the script exits with a non-zero code, report the validation error to the user and stop. Do not proceed to any subsequent step.
+
+Confirm the current working directory is inside a git repository by running:
+
+```bash
+git rev-parse --is-inside-work-tree
+```
+
+If not inside a git repo, ask the user via AskUserQuestion whether to initialize one with `git init`. Do not initialize without explicit consent. If the user declines, stop execution.
+
+## 3. Resume Detection
+
+Check for evidence of a prior angry-ralph run:
+
+1. Check if `.claude/angry-ralph.local.md` exists in the project root.
+2. Check if a `planning/` directory exists as a sibling to the spec file (`SPEC_DIR/planning/`).
+
+If **either** artifact exists:
+
+- Read `planning/config.json` if it exists to determine the last recorded phase.
+- Read `.claude/angry-ralph.local.md` if it exists to determine active state.
+- Inform the user that a previous run was detected and summarize its state (phase, section if applicable).
+- Ask the user via AskUserQuestion: "Resume the previous run, or start fresh? (Starting fresh will delete existing planning artifacts.)"
+- If the user chooses **resume**: skip to the appropriate phase based on detected state. Consult the angry-ralph skill's Resume & Recovery section for the full procedure.
+- If the user chooses **start fresh**: delete `planning/` directory and `.claude/angry-ralph.local.md`, then continue with setup below.
+
+If **neither** artifact exists, proceed directly to setup.
+
+## 4. Setup
+
+Create the planning directory structure:
+
+```bash
+mkdir -p "${SPEC_DIR}/planning/reviews"
+mkdir -p "${SPEC_DIR}/planning/sections"
+```
+
+Initialize the session config file at `${SPEC_DIR}/planning/config.json`:
+
+```json
+{
+  "spec_file": "<absolute path to spec file>",
+  "max_review_iterations": <N>,
+  "started_at": "<ISO 8601 timestamp>",
+  "current_phase": "decompose",
+  "completed_phases": []
+}
+```
+
+Use actual resolved values for `spec_file`, `max_review_iterations`, and `started_at`.
+
+## 5. Handoff to Skill
+
+The angry-ralph skill handles the full 6-phase workflow. Create task list items to track progress:
+
+1. **Phase 1: DECOMPOSE** -- Read spec, interview user, identify planning units
+2. **Phase 2: PLAN** -- Write detailed implementation plan with sections
+3. **Phase 3: ADVERSARIAL REVIEW** -- External LLM review via gemini and codex
+4. **Phase 4: SPLIT** -- Parse plan into section specs
+5. **Phase 5: EXECUTE** -- TDD Ralph Loop for each section
+6. **Phase 6: FINAL REVIEW** -- Integration review of completed codebase
+
+After creating the task list, begin **Phase 1: DECOMPOSE** immediately. Follow the procedures defined in the angry-ralph skill, starting with the DECOMPOSE phase instructions. Read the spec file and begin the interview process.

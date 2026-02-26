@@ -1,0 +1,16 @@
+{
+  "description": "angry-ralph Stop hook for TDD-gated Ralph Loop execution",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
