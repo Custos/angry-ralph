@@ -202,7 +202,7 @@ Or all at once:
 for t in tests/test-*.sh; do echo "=== $t ==="; bash "$t"; echo; done
 ```
 
-**84 tests** across 4 suites covering state management, environment validation, stop hook behavior (including fail-closed on corrupt transcripts, promise swap gating), and plugin structure integrity.
+**95 tests** across 4 suites covering state management, environment validation, stop hook behavior (including fail-closed on corrupt transcripts, promise swap gating, TDD iteration cap), and plugin structure integrity.
 
 ## Planning Artifacts
 
