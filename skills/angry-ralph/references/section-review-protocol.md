@@ -10,12 +10,66 @@ The section review gate triggers after the SubagentStop hook allows exit (comple
 
 1. TDD subagent outputs `SECTION_COMPLETE`
 2. SubagentStop hook verifies promise → allows exit
-3. **Section review gate runs** (this protocol)
-4. Atomic commit (if review passes)
+3. **Mechanical gates run** (hard fail — no AI judgment)
+4. **Section review gate runs** (this protocol, AI evaluation)
+5. Atomic commit (if both pass)
 
 ---
 
-## How to Execute
+## Mechanical Gates (Pre-Review)
+
+Before the AI review runs, execute these mechanical bash checks. They are dumb, deterministic, and non-negotiable. If ANY gate fails, the section is treated as FAILED — do not proceed to the AI review, do not write a `.done` marker.
+
+### Gate 1: Stub/Laziness Grep
+
+Scan all changed source files (excluding test files) for laziness markers. Run via:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/lib/mechanical-gates.sh stub_check
+```
+
+Matches: `TODO`, `FIXME`, `XXX`, `HACK`, `NotImplementedError`, `pass$` (Python stubs). Source files only — test files are excluded.
+
+**On failure**: Report the exact file:line matches to the subagent and re-enter the TDD loop. Hard gate — section cannot proceed.
+
+### Gate 2: Test Execution Verification
+
+Re-run the test suite and verify exit 0 + at least one test actually ran. Run via:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/lib/mechanical-gates.sh test_verify "<test_runner_command>"
+```
+
+Parses test runner output for known frameworks (pytest, jest, vitest, go test, cargo test). If zero tests ran or runner exits non-zero, the gate fails.
+
+**On failure**: Same as Gate 1 — re-enter TDD loop.
+
+### Gate 3: Spec Contract Compliance
+
+Verify every test function name from the section spec's data contracts exists in the test files. Run via:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/lib/mechanical-gates.sh spec_compliance "<section-spec-path>" "<project-dir>"
+```
+
+The section spec (from Phase 4) contains YAML data contracts with test function names. This gate verifies the subagent actually wrote those tests — not different tests that happen to pass.
+
+**On failure**: Report which contract test names are missing. Re-enter TDD loop with instructions to implement the missing tests.
+
+### Gate Failure Behavior
+
+When any mechanical gate fails:
+1. Increment `iteration` in the state file.
+2. Feed the gate failure output back to the TDD subagent as the next prompt.
+3. The subagent must fix the issue and re-run tests.
+4. Re-run all mechanical gates after the fix.
+5. Only proceed to the AI review when all gates pass.
+
+Mechanical gates run on EVERY review-fix iteration too — not just the first pass.
+
+---
+
+## How to Execute (AI Review)
 
 ### 1. Identify Changed Files
 
@@ -116,7 +170,7 @@ When CRITICAL or actionable WARNING findings are identified:
 
 ### Iteration Cap
 
-The review-fix cycle runs a maximum of `max_section_review_iterations` times (default: 2, configurable via `--max-section-review-iterations`). Read this value from `planning/config.json`.
+The review-fix cycle runs a maximum of `max_section_review_iterations` times (default: 2, configurable via `--max-section-review-iterations`). Read this value from `.ralph-state/pipeline.json`.
 
 When the cap is reached with findings still open:
 - Log all remaining findings to `planning/reviews/sections/<section-name>/review-N.md`

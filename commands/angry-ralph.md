@@ -12,131 +12,111 @@ When the user invokes `/angry-ralph`, execute the following steps in order.
 
 Parse the invocation arguments:
 
-- **`@file.md`** (required) -- The input specification file. This is the `@`-prefixed file reference provided by the user.
-- **`--max-review-iterations N`** (optional, default: `3`) -- Maximum adversarial review iterations for Phase 3 and Phase 6.
-- **`--max-section-review-iterations N`** (optional, default: `2`) -- Maximum per-section review-fix iterations during Phase 5.
-- **`--max-tdd-iterations N`** (optional, default: `20`) -- Maximum TDD loop iterations per section before escalating to user.
+- **`@file.md`** (required) -- The input specification file.
+- **`--auto`** (optional) -- Skip clarifying questions and review approval. Store `"mode": "auto"` in pipeline config.
+- **`--help`** (optional) -- Print command reference and exit.
+- **`--max-review-iterations N`** (optional, default: `3`)
+- **`--max-section-review-iterations N`** (optional, default: `2`)
+- **`--max-tdd-iterations N`** (optional, default: `20`)
 
-If no `@file.md` argument is provided, report an error and display usage:
+### --help Output
+
+If `--help` is passed, print the following and stop:
 
 ```
-Error: No spec file provided.
+angry-ralph — Spec-to-code pipeline with adversarial review and TDD execution.
 
-Usage: /angry-ralph @spec-file.md [options]
+Usage:
+  /angry-ralph @spec.md [--auto] [--max-review-iterations N] [--max-section-review-iterations N] [--max-tdd-iterations N]
 
-  @spec-file.md                    Path to the input specification file (required)
-  --max-review-iterations N        Max review loop iterations (default: 3)
-  --max-section-review-iterations N  Max per-section review-fix iterations (default: 2)
-  --max-tdd-iterations N           Max TDD loop iterations per section (default: 20)
+Commands:
+  /angry-ralph @spec [--auto]           Smart monolith: Phases 1-6, idempotent resume.
+  /angry-architect @spec [--auto]       Phases 1-2: Decompose + Plan.
+  /angry-review [plan|code|section <n>] Phase 3 in pipeline. On-demand anytime.
+  /angry-execute [--auto] [--rebuild <section>]  Phases 4-6: Split + TDD + Final Review.
+  /angry-fix [context] [prompt]         Surgical TDD strike: test, fix, green, commit.
+  /cancel-ralph                         Kill switch: halt loop, save state, exit.
+  /angry-status                         Read-only pipeline state display.
+
+Options:
+  --auto                              Skip questions + review approval. Auto-accept and proceed.
+  --max-review-iterations N           Max review rounds in Phase 3/6 (default: 3).
+  --max-section-review-iterations N   Max per-section review-fix cycles (default: 2).
+  --max-tdd-iterations N              Max TDD loop iterations per section (default: 20).
+
+State: .ralph-state/ (gitignored)
+Artifacts: planning/ (persistent)
 ```
 
-Stop execution after displaying usage.
+If no `@file.md` argument is provided and `--help` is not passed, report the error and display the same help text.
 
-Validate that the referenced spec file exists and is readable. Resolve its absolute path and store it as `SPEC_FILE`. Derive `SPEC_DIR` as the directory containing the spec file.
+Validate that the referenced spec file exists and is readable. Resolve its absolute path as `SPEC_FILE`.
 
 ## 2. Environment Validation
 
-Run the environment validation script via the Bash tool:
+Run via the Bash tool:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/checks/validate-env.sh
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/checks/validate-env.sh
 ```
 
-If the script exits with a non-zero code, report the validation error to the user and stop (this means a required tool like `git`, `python3`, or `claude` is missing). Do not proceed to any subsequent step.
+Halt on non-zero exit. Capture JSON stdout (`review_tier`, `available_reviewers`).
 
-If the script succeeds, capture its JSON stdout output. This contains `review_tier` and `available_reviewers` which determine which review tier is active. Store these values for inclusion in `planning/config.json` during setup.
-
-Confirm the current working directory is inside a git repository by running:
+Confirm git repository:
 
 ```bash
 git rev-parse --is-inside-work-tree
 ```
 
-If not inside a git repo, ask the user via AskUserQuestion whether to initialize one with `git init`. Do not initialize without explicit consent. If the user declines, stop execution.
+If not in a git repo, ask whether to `git init`. Do not initialize without consent.
 
-## 3. Resume Detection
+## 3. Backwards Compatibility Migration
 
-Check for evidence of a prior angry-ralph run:
-
-1. Check if `.claude/angry-ralph.local.md` exists in the project root.
-2. Check if a `planning/` directory exists as a sibling to the spec file (`SPEC_DIR/planning/`).
-
-If **either** artifact exists:
-
-- Read `planning/config.json` if it exists to determine the last recorded phase.
-
-  **Validate config.json integrity** before parsing. Run:
-
-  ```bash
-  python3 -m json.tool planning/config.json > /dev/null 2>&1
-  ```
-
-  If exit code is non-zero, report: "Config file is corrupted." and offer start-fresh.
-
-- Read `.claude/angry-ralph.local.md` if it exists to determine active state.
-
-  **Validate state file integrity** before reading fields. Check that the file contains opening and closing `---` markers and at least the `active`, `phase`, and `completion_promise` fields. Run:
-
-  ```bash
-  python3 -c "
-  import sys
-  content = open(sys.argv[1]).read()
-  markers = content.count('---')
-  if markers < 2:
-      print('invalid')
-      sys.exit(0)
-  for field in ['active:', 'phase:', 'completion_promise:']:
-      if field not in content:
-          print('invalid')
-          sys.exit(0)
-  print('valid')
-  " .claude/angry-ralph.local.md
-  ```
-
-  If the output is `invalid`, report: "State file is corrupted. Starting fresh is recommended." Include this in the AskUserQuestion options alongside "Resume" and "Start fresh".
-- Inform the user that a previous run was detected and summarize its state (phase, section if applicable).
-- Ask the user via AskUserQuestion: "Resume the previous run, or start fresh? (Starting fresh will delete existing planning artifacts.)"
-- If the user chooses **resume**: skip to the appropriate phase based on detected state. Consult the angry-ralph skill's Resume & Recovery section for the full procedure.
-- If the user chooses **start fresh**: delete `planning/` directory and `.claude/angry-ralph.local.md`, then continue with setup below.
-
-If **neither** artifact exists, proceed directly to setup.
-
-## 4. Setup
-
-Create the planning directory structure:
+Run the migration check via the Bash tool:
 
 ```bash
-mkdir -p "${SPEC_DIR}/planning/reviews"
-mkdir -p "${SPEC_DIR}/planning/sections"
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh migrate .
 ```
 
-Initialize the session config file at `${SPEC_DIR}/planning/config.json`:
+If output is `migrated`, inform user: "Migrated legacy state to .ralph-state/".
 
-```json
-{
-  "spec_file": "<absolute path to spec file>",
-  "max_review_iterations": <N>,
-  "max_section_review_iterations": <N>,
-  "max_tdd_iterations": <N>,
-  "started_at": "<ISO 8601 timestamp>",
-  "current_phase": "decompose",
-  "completed_phases": [],
-  "review_tier": "<adversarial|partial|self-reflection>",
-  "available_reviewers": ["<list from validate-env output>"]
-}
+## 4. Resume Detection via .done Markers
+
+Check `.ralph-state/` for prior state:
+
+- `.ralph-state/phases/architect.done` → Phases 1-2 done
+- `.ralph-state/phases/review.done` → Phase 3 done
+- `.ralph-state/phases/execute.done` → Phases 4-6 done. Pipeline complete.
+- `.ralph-state/pipeline.json` → read `current_phase` and `completed_sections` for finer resume
+- `.ralph-state/loop.md` with `active=true` → mid-section TDD resume
+
+If prior state detected, ask via AskUserQuestion: "Resume the previous run, or start fresh?"
+
+If start fresh: `rm -rf .ralph-state/ planning/` and continue.
+
+## 5. Setup
+
+Initialize state via the Bash tool:
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh create . "<SPEC_FILE>" "<MODE>" "<MAX_REVIEW>" "<MAX_SECTION_REVIEW>" "<MAX_TDD>" "<REVIEW_TIER>" "<AVAILABLE_REVIEWERS>"
 ```
 
-Use actual resolved values for all fields. The `review_tier` and `available_reviewers` come from the JSON output of the environment validation script.
+Where `<MODE>` is `auto` if `--auto` was passed, otherwise `interactive`. Substitute actual values for all placeholders.
 
-## 5. Handoff to Skill
+Create planning directories:
 
-The angry-ralph skill handles the full 6-phase workflow. Create task list items to track progress:
+```bash
+mkdir -p planning/reviews planning/sections
+```
 
-1. **Phase 1: DECOMPOSE** -- Read spec, interview user, identify planning units
-2. **Phase 2: PLAN** -- Write detailed implementation plan with sections
-3. **Phase 3: REVIEW** -- LLM review via available reviewers (tier-dependent)
-4. **Phase 4: SPLIT** -- Parse plan into section specs
-5. **Phase 5: EXECUTE** -- TDD Ralph Loop for each section
-6. **Phase 6: FINAL REVIEW** -- Integration review of completed codebase
+## 6. Handoff to Skill
 
-After creating the task list, begin **Phase 1: DECOMPOSE** immediately. Follow the procedures defined in the angry-ralph skill, starting with the DECOMPOSE phase instructions. Read the spec file and begin the interview process.
+The angry-ralph skill handles the full 6-phase workflow. Begin Phase 1 immediately.
+
+### --auto Behavior
+
+When `mode` is `"auto"` in pipeline.json:
+- **Phase 1**: Do NOT use AskUserQuestion. Make secure, industry-standard assumptions.
+- **Phase 3**: Run review and log findings, but auto-accept and proceed without human approval.
+- **Phase 5/6**: Skip confirmation prompts.

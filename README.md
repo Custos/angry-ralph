@@ -92,16 +92,15 @@ The current working directory should be a git repo (or angry-ralph will offer to
 
 | Command | Description |
 |---------|-------------|
-| `/angry-ralph @spec.md` | Start the 6-phase pipeline against a spec file |
+| `/angry-ralph @spec.md [--auto]` | Start the full 6-phase pipeline against a spec file |
+| `/angry-architect @spec.md [--auto]` | Run Phases 1-2 only (decompose + plan) |
+| `/angry-review [plan\|code\|section <name>]` | Adversarial review — pipeline Phase 3 or on-demand |
+| `/angry-execute [--auto] [--rebuild <section>]` | Run Phases 4-6 (split, TDD execute, final review) |
+| `/angry-fix [context] [prompt]` | Surgical TDD strike on a specific file or bug |
 | `/cancel-ralph` | Cancel an active Ralph Loop and remove state |
-| `/angry-review-code` | On-demand adversarial review of code against the plan |
-| `/angry-review-plan` | On-demand adversarial review of the implementation plan |
-| `/angry-review-section <name>` | On-demand adversarial review of a specific section |
-| `/angry-status` | Show current pipeline state |
-| `/angry-skip-to <phase>` | Advance pipeline to a specific phase |
-| `/angry-rerun <phase>` | Re-run a specific phase, resetting its artifacts |
-| `/angry-split` | Re-generate section specs from the current plan |
-| `/angry-ralph-help` | Show usage, workflow overview, and prerequisites |
+| `/angry-status` | Show current pipeline state (read-only) |
+
+All commands are thin wrappers that delegate to `scripts/lib/pipeline.sh` and `scripts/lib/mechanical-gates.sh`.
 
 ## Architecture
 
@@ -112,16 +111,13 @@ The current working directory should be a git repo (or angry-ralph will offer to
 ├── agents/
 │   └── external-reviewer.md     # Subagent: invokes gemini + codex CLIs (Bash + Read only)
 ├── commands/
-│   ├── angry-ralph.md           # Main pipeline entry point
-│   ├── angry-rerun.md           # Phase re-execution
-│   ├── angry-review-code.md     # On-demand code review
-│   ├── angry-review-plan.md     # On-demand plan review
-│   ├── angry-review-section.md  # On-demand section review
-│   ├── angry-skip-to.md         # Phase advancement
-│   ├── angry-split.md           # Re-generate section specs
+│   ├── angry-ralph.md           # Full 6-phase pipeline (thin wrapper)
+│   ├── angry-architect.md       # Phases 1-2: decompose + plan
+│   ├── angry-review.md          # Phase 3 + on-demand review
+│   ├── angry-execute.md         # Phases 4-6: split, TDD, final review
+│   ├── angry-fix.md             # Surgical TDD strike
 │   ├── angry-status.md          # Pipeline state display
-│   ├── cancel-ralph.md          # Loop cancellation
-│   └── help.md                  # Usage docs
+│   └── cancel-ralph.md          # Loop cancellation
 ├── hooks/
 │   ├── hooks.json               # Stop + SubagentStop hook registration
 │   └── stop-hook.sh             # TDD-gated exit interceptor
@@ -129,7 +125,9 @@ The current working directory should be a git repo (or angry-ralph will offer to
 │   ├── checks/
 │   │   └── validate-env.sh      # Prerequisite validation
 │   └── lib/
-│       └── state.sh             # State file CRUD (YAML frontmatter)
+│       ├── state.sh             # State file CRUD (YAML frontmatter)
+│       ├── pipeline.sh          # Pipeline state engine (JSON config, .done markers)
+│       └── mechanical-gates.sh  # Stub grep, test verify, spec compliance gates
 ├── skills/
 │   └── angry-ralph/
 │       ├── SKILL.md             # Master orchestration skill
@@ -144,16 +142,18 @@ The current working directory should be a git repo (or angry-ralph will offer to
     ├── test-state.sh
     ├── test-validate-env.sh
     ├── test-stop-hook.sh
-    └── test-plugin-structure.sh
+    ├── test-plugin-structure.sh
+    ├── test-mechanical-gates.sh
+    └── test-pipeline.sh
 ```
 
 ### Key Components
 
 **External Reviewer Agent** - A sandboxed subagent restricted to `Bash` and `Read` tools only. It invokes `gemini` and `codex` via CLI subprocesses, passing file paths (never stdin). The CLIs read spec/plan/code files from disk and write review output to the `planning/reviews/` directory.
 
-**Ralph Loop (Stop + SubagentStop Hooks)** - During the EXECUTE phase, both the Stop and SubagentStop hooks intercept exit attempts. Each section is dispatched to a fresh subagent with clean context, and the SubagentStop hook gates its completion. The hook checks a state file (`.claude/angry-ralph.local.md`) and the session transcript for a completion promise (`SECTION_COMPLETE`). If the promise isn't found in the last assistant message, the hook blocks exit and feeds the section prompt back, forcing the loop to continue until tests pass. The hook is fail-closed: if transcript parsing fails, it blocks rather than allowing a premature exit. The main session stays lean, managing only coordination and section transitions.
+**Ralph Loop (Stop + SubagentStop Hooks)** - During the EXECUTE phase, both the Stop and SubagentStop hooks intercept exit attempts. Each section is dispatched to a fresh subagent with clean context, and the SubagentStop hook gates its completion. The hook checks a state file (`.ralph-state/loop.md`) and the session transcript for a completion promise (`SECTION_COMPLETE`). If the promise isn't found in the last assistant message, the hook blocks exit and feeds the section prompt back, forcing the loop to continue until tests pass. The hook is fail-open before confirming an active execute-phase loop (safe default), and fail-closed once gating a confirmed TDD loop. The main session stays lean, managing only coordination and section transitions.
 
-**State Management** - A YAML-frontmatter markdown file tracks loop state (phase, iteration, current section, completion promise). The `state.sh` library provides portable read/write functions using `awk` (no BSD-specific `sed -i`).
+**State Management** - All state lives in `.ralph-state/`: `loop.md` (YAML-frontmatter TDD loop state), `pipeline.json` (config, phase tracking, sections), and `.done` marker files (`architect.done`, `review.done`, `execute.done`) for idempotent phase gating. The `state.sh`, `pipeline.sh`, and `mechanical-gates.sh` libraries in `scripts/lib/` provide all state operations.
 
 ## How the Review Loop Works
 
@@ -202,15 +202,21 @@ Or all at once:
 for t in tests/test-*.sh; do echo "=== $t ==="; bash "$t"; echo; done
 ```
 
-**95 tests** across 4 suites covering state management, environment validation, stop hook behavior (including fail-closed on corrupt transcripts, promise swap gating, TDD iteration cap), and plugin structure integrity.
+**138 tests** across 6 suites covering state management, environment validation, stop hook behavior (fail-closed on corrupt transcripts, promise swap gating, TDD iteration cap), plugin structure integrity, mechanical gates (stub grep, test verification, spec compliance), and pipeline state engine (JSON config, .done markers, phase transitions).
 
 ## Planning Artifacts
 
-When angry-ralph runs, it creates a `planning/` directory next to your spec file:
+When angry-ralph runs, it creates a `.ralph-state/` directory for pipeline state and a `planning/` directory for artifacts:
 
 ```
+.ralph-state/
+├── pipeline.json               # Session config (phase, mode, sections, timestamps)
+├── loop.md                     # TDD loop state (YAML frontmatter + prompt body)
+├── architect.done              # Phase completion marker
+├── review.done                 # Phase completion marker
+└── execute.done                # Phase completion marker
+
 planning/
-├── config.json                 # Session config (phase, timestamps)
 ├── angry-ralph-plan.md         # The implementation plan
 ├── angry-ralph-interview.md    # Decomposition interview notes
 ├── reviews/

@@ -18,7 +18,7 @@ Initiate the final review only after ALL of the following conditions are met:
 2. Spawn the `external-reviewer` subagent via the Task tool.
 3. Provide the subagent with the following inputs:
    - Review type: `"final integration review"`
-   - Active review tier and available reviewers (from `planning/config.json`)
+   - Active review tier and available reviewers (from `.ralph-state/pipeline.json`)
    - Project directory path (absolute)
    - Plan file path: `planning/angry-ralph-plan.md`
    - Sections directory: `planning/sections/`
@@ -60,7 +60,7 @@ Phase 6 uses a self-healing loop: review → triage → fix → re-run tests →
 
 ```
 iteration = 0
-max_iterations = max_review_iterations from config.json (default 3)
+max_iterations = max_review_iterations from .ralph-state/pipeline.json (default 3)
 
 while iteration < max_iterations:
     create review directory: planning/reviews/final/iteration-{iteration + 1}/
@@ -128,6 +128,6 @@ After the loop exits (clean or capped), produce a summary report at `planning/re
 After the final review loop and any resulting fixes:
 
 1. Deactivate the state file by setting `active=false` (or remove it entirely).
-2. Update `planning/config.json`: set `current_phase` to `"complete"` and append `"final_review"` to `completed_phases`.
+2. Update `.ralph-state/pipeline.json`: set `current_phase` to `"complete"` and append `"final_review"` to `completed_phases`.
 3. Report full pipeline completion to the user.
 4. List every commit made during the session, in chronological order.

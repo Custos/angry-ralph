@@ -94,11 +94,31 @@ For each planning unit (or the single unit if no split), produce a detailed impl
 17. Each section must include:
     - **Scope**: what files and components this section creates or modifies.
     - **Dependencies**: which prior sections must be complete first.
-    - **Test specifications**: explicit list of tests to write, structured as:
-      - Test name / description
-      - Input or setup conditions
-      - Expected behavior or output
-      - Test framework and exact runner command
+    - **Test data contracts**: Each test specified as a YAML data contract with `input`, `expected_output` or `expected_error`. No language-specific syntax — the implementation subagent translates contracts into the project's test framework. Each contract must include:
+      - Test name (becomes the test function name)
+      - `input`: exact arguments/payloads
+      - `expected_output` or `expected_error`: exact return value or error type+message
+      - Runner command
+
+      Example of a GOOD test contract:
+      ```yaml
+      test_login_rejects_invalid_password:
+        input:
+          function: auth.login
+          args: ["alice", "wrong-password"]
+        expected_error:
+          type: AuthError
+          message: "invalid credentials"
+        run: pytest tests/test_auth.py::test_login_rejects_invalid_password
+      ```
+
+      Example of a BAD test spec (vague, allows stubs to pass):
+      ```
+      Test that login works correctly with invalid passwords.
+      ```
+
+      The implementation subagent MUST translate these contracts into real tests. The mechanical gates in Phase 5 verify that every contract's test function name exists in the test files.
+
     - **Acceptance criteria**: concrete conditions (all tests pass, specific behavior verified) that mark the section as complete.
 
 18. Order sections so that foundational components (utilities, data models, core logic) come before components that depend on them (API layers, UI, orchestration).
@@ -113,7 +133,7 @@ For each planning unit (or the single unit if no split), produce a detailed impl
 Before marking the plan as complete, verify:
 
 - [ ] Every component listed in the architecture has at least one section that implements it.
-- [ ] Every section has explicit test specifications with expected behaviors.
+- [ ] Every section has test data contracts with exact input/expected_output/expected_error (not prose descriptions).
 - [ ] Section dependencies form a valid DAG (no circular dependencies).
 - [ ] The test runner command is specified and consistent across all sections.
 - [ ] Error handling strategy covers all component boundaries.

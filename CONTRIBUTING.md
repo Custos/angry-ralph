@@ -49,7 +49,7 @@ claude --plugin-dir /path/to/angry-ralph --dangerously-skip-permissions
 
 > **Note:** `--dangerously-skip-permissions` is practically necessary for the Ralph Loop to run without interruption, but it grants unrestricted filesystem and shell access. Use in isolated environments.
 
-Then test commands (`/angry-ralph`, `/cancel-ralph`, `/angry-ralph-help`) in the session.
+Then test commands (`/angry-ralph`, `/angry-architect`, `/angry-review`, `/angry-execute`, `/angry-fix`, `/angry-status`, `/cancel-ralph`) in the session.
 
 ## Code Style
 
@@ -85,6 +85,8 @@ Then test commands (`/angry-ralph`, `/cancel-ralph`, `/angry-ralph-help`) in the
 | `test-validate-env.sh` | Tool detection, missing tool failures |
 | `test-stop-hook.sh` | Block/allow decisions, JSON output, iteration increment, fail-closed |
 | `test-plugin-structure.sh` | All plugin files exist with correct content |
+| `test-mechanical-gates.sh` | Stub grep, test verification, spec contract compliance |
+| `test-pipeline.sh` | Pipeline JSON config, .done markers, phase transitions |
 
 ### Writing Tests
 
@@ -115,7 +117,7 @@ All tests must pass before submitting a PR.
 
 ### Pull Requests
 
-1. Ensure all 4 test suites pass (95+ tests)
+1. Ensure all 6 test suites pass (138+ tests)
 2. Add tests for new functionality
 3. Update the README if you're adding commands, changing prerequisites, or modifying the pipeline
 4. Keep PRs focused — one feature or fix per PR

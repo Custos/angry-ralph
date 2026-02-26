@@ -20,7 +20,7 @@ Run the environment validation script before proceeding with any phase:
 ${CLAUDE_PLUGIN_ROOT}/scripts/checks/validate-env.sh
 ```
 
-This verifies that required tools (`git`, `python3`, `claude`) are in PATH and detects optional external reviewers (`gemini`, `codex`). If required tools are missing, halt and report the error. The script outputs JSON to stdout with the detected `review_tier` and `available_reviewers` — store these in `planning/config.json` for use during review phases.
+This verifies that required tools (`git`, `python3`, `claude`) are in PATH and detects optional external reviewers (`gemini`, `codex`). If required tools are missing, halt and report the error. The script outputs JSON to stdout with the detected `review_tier` and `available_reviewers` — store these in `.ralph-state/pipeline.json` via `pipeline.sh create`.
 
 **Review Tiers:**
 
@@ -43,7 +43,8 @@ Parse the invocation arguments:
 - **`@file.md`** (required) -- Path to the input specification file. Reject invocation if no spec file is provided.
 - **`--max-review-iterations N`** (optional, default: 3) -- Maximum number of adversarial review iterations in Phase 3 and Phase 6.
 - **`--max-section-review-iterations N`** (optional, default: 2) -- Maximum number of per-section review-fix iterations during Phase 5.
-- **`--max-tdd-iterations N`** (optional, default: 20) -- Maximum TDD loop iterations per section before escalating to user. Stored in `planning/config.json`.
+- **`--max-tdd-iterations N`** (optional, default: 20) -- Maximum TDD loop iterations per section before escalating to user.
+- **`--auto`** (optional) -- Skip clarifying questions and review approval. Stored in `.ralph-state/pipeline.json` as `"mode": "auto"`.
 
 Validate that the spec file exists and is readable. Store the resolved absolute path for use across all phases.
 
@@ -57,9 +58,11 @@ Evaluate whether the spec requires decomposition into multiple planning units. A
 
 Create task list items for each planning unit to enable checkpoint tracking.
 
+**--auto mode**: If `mode` is `"auto"` in `.ralph-state/pipeline.json`, do NOT use AskUserQuestion for the interview. Make the most secure, industry-standard architectural assumption for every ambiguity and proceed immediately. Still write interview notes documenting the assumptions made.
+
 Consult `references/planning-protocol.md` for the detailed decomposition procedure, interview rules, and splitting heuristics.
 
-When Phase 1 is complete, update `planning/config.json`: set `current_phase` to `"plan"` and append `"decompose"` to `completed_phases`.
+When Phase 1 is complete, update `.ralph-state/pipeline.json`: set `current_phase` to `"plan"` and append `"decompose"` to `completed_phases`.
 
 ## Phase 2: PLAN
 
@@ -79,7 +82,7 @@ Run the plan quality checklist before marking Phase 2 complete: verify every com
 
 Consult `references/planning-protocol.md` for the plan structure, section format, and quality checklist.
 
-When Phase 2 is complete, update `planning/config.json`: set `current_phase` to `"review"` and append `"plan"` to `completed_phases`.
+When Phase 2 is complete, update `.ralph-state/pipeline.json`: set `current_phase` to `"review"` and append `"plan"` to `completed_phases`.
 
 ## Phase 3: ADVERSARIAL REVIEW
 
@@ -92,7 +95,7 @@ angry-ralph: Review tier — <TIER_LABEL>
 Reviewers: <comma-separated list of active reviewers>
 ```
 
-Read the `review_tier` and `available_reviewers` from `planning/config.json` to determine which reviewers to use. Spawn the `external-reviewer` subagent, passing the active tier and available reviewers in the prompt. Before each iteration, create the review output directory: `planning/reviews/iteration-N/`.
+Read the `review_tier` and `available_reviewers` from `.ralph-state/pipeline.json` to determine which reviewers to use. Spawn the `external-reviewer` subagent, passing the active tier and available reviewers in the prompt. Before each iteration, create the review output directory: `planning/reviews/iteration-N/`.
 
 The subagent produces structured markdown with `## Findings` (tagged with source attribution `[Gemini]`, `[Codex]`, or `[Claude-Reflection]` AND severity `[CRITICAL]`, `[WARNING]`, `[INFO]`), `## Questions`, and `## Summary`.
 
@@ -114,9 +117,11 @@ If any question from Gemini or Codex reveals genuine ambiguity that cannot be re
 
 Track iteration count against `--max-review-iterations` (default 3). Exit the review loop early when a review iteration returns zero CRITICAL findings, zero WARNING findings, and zero unresolved questions. When max iterations are reached without a clean review, present the remaining open items to the user and ask via `AskUserQuestion` whether to proceed to the split phase or continue reviewing.
 
+**--auto mode**: Run the full review loop and log all findings, but do NOT pause for human approval. Auto-accept and proceed to the split phase. Genuine ambiguity questions are answered with secure defaults.
+
 Consult `references/review-protocol.md` for the triage decision tree, CLI invocation patterns, and iteration control logic.
 
-When Phase 3 is complete, update `planning/config.json`: set `current_phase` to `"split"` and append `"review"` to `completed_phases`.
+When Phase 3 is complete, update `.ralph-state/pipeline.json`: set `current_phase` to `"split"` and append `"review"` to `completed_phases`.
 
 ## Phase 4: SPLIT
 
@@ -124,7 +129,7 @@ Parse the finalized plan into numbered section markdown specs. Each section spec
 
 - **Scope** -- Files and components created or modified
 - **Dependencies** -- Prior sections that must be complete first
-- **Test specifications** -- Explicit list of tests with names, inputs, expected behavior, and runner command
+- **Test data contracts** -- YAML data contracts defining `input` payloads and `expected_output` or `expected_error` for each test. No language-specific syntax. Each contract has a test name (becomes the function name), input args, and expected results. The implementation subagent translates contracts into the project's test framework. If a section spec has no data contracts, it is incomplete — fix it before proceeding to Phase 5.
 - **Acceptance criteria** -- Concrete conditions that mark the section as complete
 
 ### Output Files
@@ -150,7 +155,7 @@ Write a section manifest to `planning/sections/index.md` listing all sections in
 
 The manifest serves as the single source of truth for section ordering and completion tracking.
 
-When Phase 4 is complete, update `planning/config.json`: set `current_phase` to `"execute"` and append `"split"` to `completed_phases`.
+When Phase 4 is complete, update `.ralph-state/pipeline.json`: set `current_phase` to `"execute"` and append `"split"` to `completed_phases`.
 
 ## Phase 5: EXECUTE (Ralph Loop + TDD)
 
@@ -158,7 +163,7 @@ For each section in the order defined by the manifest:
 
 ### 1. Activate the Ralph Loop
 
-Create or update the state file at `.claude/angry-ralph.local.md` with:
+Create or update the state file at `.ralph-state/loop.md` with:
 
 ```yaml
 active: true
@@ -198,15 +203,33 @@ Output the completion promise `SECTION_COMPLETE` only when ALL of the following 
 - No compilation or runtime errors during test execution
 - The implementation satisfies the section spec's acceptance criteria
 
-If the SubagentStop hook detects that `iteration >= max_tdd_iterations` (from `planning/config.json`, default 20), it allows exit with a `tdd_cap_reached` signal instead of blocking. The main session then asks the user via `AskUserQuestion`: "Section X failed after N TDD iterations. Review errors, skip section, or keep trying (+10 iterations)?"
+If the SubagentStop hook detects that `iteration >= max_tdd_iterations` (from `.ralph-state/pipeline.json`, default 20), it allows exit with a `tdd_cap_reached` signal instead of blocking. The main session then asks the user via `AskUserQuestion`: "Section X failed after N TDD iterations. Review errors, skip section, or keep trying (+10 iterations)?"
 
 - **Skip section**: Mark the section as `failed` in `planning/sections/index.md` and advance to the next section.
-- **Keep trying**: Add 10 to `max_tdd_iterations` in config.json and re-dispatch the subagent.
+- **Keep trying**: Add 10 to `max_tdd_iterations` in `.ralph-state/pipeline.json` and re-dispatch the subagent.
 - **Review errors**: Display the last test output for user inspection before deciding.
 
-### 5. Section Review Gate
+### 5. Mechanical Gates
 
-After the SubagentStop hook permits exit and before committing, perform an inline code review of the section's changes. The main session executes this review directly — no subagent or external CLI.
+After the SubagentStop hook permits exit, run the mechanical gate script BEFORE the AI review:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/lib/mechanical-gates.sh run_all "<test_runner_command>" "<section-spec-path>" "<project-dir>"
+```
+
+Three gates, all dumb bash — no AI judgment:
+
+1. **Stub grep** -- `TODO`, `FIXME`, `XXX`, `HACK`, `NotImplementedError`, `pass$` in changed source files. Any match = fail.
+2. **Test verification** -- Re-run tests. Exit 0 + at least one test ran. Empty test suite = fail.
+3. **Contract compliance** -- Every test function name from the section spec's data contracts must exist in the test files.
+
+If the script exits non-zero: increment `iteration`, feed the gate output back, re-enter TDD loop. Only proceed to the AI review when the script exits 0.
+
+Consult `references/section-review-protocol.md` for gate details.
+
+### 6. Section Review Gate
+
+After mechanical gates pass and before committing, perform an inline code review of the section's changes. The main session executes this review directly — no subagent or external CLI.
 
 1. Run `git diff --name-only HEAD` to identify changed files.
 2. Read each changed file and the current section spec.
@@ -218,16 +241,16 @@ After the SubagentStop hook permits exit and before committing, perform an inlin
 1. Write findings to `planning/reviews/sections/<section-name>/review-N.md`.
 2. Swap `completion_promise` to `SECTION_REVIEW_FIX_COMPLETE` and update `review_iteration` in the state file.
 3. Dispatch a fresh fix subagent with the findings, section spec, and instructions to fix issues and output `SECTION_REVIEW_FIX_COMPLETE` when tests pass.
-4. After the fix subagent exits, re-review. Repeat up to `max_section_review_iterations` times (default: 2, from `planning/config.json`).
+4. After the fix subagent exits, re-review. Repeat up to `max_section_review_iterations` times (default: 2, from `.ralph-state/pipeline.json`).
 5. When clean or cap reached, restore `completion_promise` to `SECTION_COMPLETE` and reset `review_iteration` to 0.
 
 If the iteration cap is reached with findings still open, log them and proceed to commit. Do not prompt the user.
 
 Consult `references/section-review-protocol.md` for the full review checklist, severity definitions, fix cycle, and output format.
 
-### 6. Atomic Commit
+### 7. Atomic Commit
 
-After a section passes all tests and the review gate clears:
+After a section passes all mechanical gates and the review gate clears:
 
 - Stage only the files changed for the completed section
 - Commit with message format: `feat(section-NN): <section-name>`
@@ -242,7 +265,7 @@ After a section passes all tests and the review gate clears:
 
 Do not silently ignore commit failures. Do not proceed to the next section until the commit succeeds or the user explicitly skips.
 
-### 7. Advance to Next Section
+### 8. Advance to Next Section
 
 Update the state file: set `current_section` to the next section, reset `iteration` to 1, and replace the prompt body with the next section's spec. If no sections remain, proceed to Phase 6.
 
@@ -250,7 +273,7 @@ Consult `references/tdd-protocol.md` for TDD red-green cycle rules, test command
 
 Consult `references/loop-protocol.md` for state file format, loop lifecycle, section transitions, and atomic commit rules.
 
-When Phase 5 is complete (all sections executed), update `planning/config.json`: set `current_phase` to `"final_review"` and append `"execute"` to `completed_phases`.
+When Phase 5 is complete (all sections executed), update `.ralph-state/pipeline.json`: set `current_phase` to `"final_review"` and append `"execute"` to `completed_phases`.
 
 ## Phase 6: FINAL REVIEW
 
@@ -285,59 +308,36 @@ When `max_review_iterations` is exhausted with findings still open:
 
 Produce a summary report at `planning/reviews/final/review-summary.md`: total iterations, findings per severity, fixes with commits, unresolved items.
 
-Deactivate the state file by setting `active=false` or removing it entirely. Update `planning/config.json`: set `current_phase` to `"complete"` and append `"final_review"` to `completed_phases`. Report full pipeline completion to the user. List every commit made during the session in chronological order.
+Deactivate the state file by setting `active=false` or removing it entirely. Update `.ralph-state/pipeline.json`: set `current_phase` to `"complete"` and append `"final_review"` to `completed_phases`. Report full pipeline completion to the user. List every commit made during the session in chronological order.
 
 Consult `references/final-review-protocol.md` for the complete final review loop, triage decision tree, fix rules, and completion steps.
 
 ## State Management
 
-### State File
+### State File (Ralph Loop)
 
-The Ralph Loop state file lives at `.claude/angry-ralph.local.md`. It uses YAML frontmatter between `---` markers followed by a prompt body. Key fields:
+The Ralph Loop state file lives at `.ralph-state/loop.md`. Managed via `scripts/lib/state.sh`.
 
-- `active` -- Whether the loop is running (`true` / `false`)
-- `phase` -- Current pipeline phase (`plan`, `review`, `split`, `execute`, `final_review`)
-- `iteration` -- Current iteration number within the active phase
-- `max_iterations` -- Maximum iterations allowed (0 = unlimited, test-gated only)
-- `current_section` -- Section identifier being implemented during execute phase
-- `completion_promise` -- Exact string required in transcript to permit exit
-- `started_at` -- ISO 8601 timestamp of activation
-- `spec_file` -- Absolute path to the original spec file
-- `planning_dir` -- Absolute path to the planning directory
+### Pipeline Config
 
-### Session Config
+Pipeline configuration lives at `.ralph-state/pipeline.json`. Managed via `scripts/lib/pipeline.sh`.
 
-Store session configuration in `planning/config.json` for resume support. Include:
+### Done Markers
 
-- Original spec file path
-- Max review iterations setting
-- Max section review iterations setting
-- Pipeline start timestamp
-- Current phase at time of last checkpoint
-- List of completed phases
+Phase completion tracked by marker files in `.ralph-state/phases/`:
+- `architect.done` -- Phases 1-2 complete
+- `review.done` -- Phase 3 complete
+- `execute.done` -- Phases 4-6 complete
+
+Managed via `pipeline.sh write_done|check_done|remove_done`.
 
 ### Phase Transition Tracking
 
-**At the start of each phase**, update `planning/config.json`:
-- Set `current_phase` to the phase name (`decompose`, `plan`, `review`, `split`, `execute`, `final_review`)
-
-**At the end of each phase**, update `planning/config.json`:
-- Append the completed phase name to the `completed_phases` array
-
-**At pipeline completion** (end of Phase 6), set `current_phase` to `"complete"`.
-
-This tracking is critical for resume detection and must happen at every phase boundary. Use python3 for JSON updates:
+At each phase boundary, update via pipeline.sh:
 
 ```bash
-python3 -c "
-import json
-with open('planning/config.json', 'r') as f:
-    cfg = json.load(f)
-cfg['current_phase'] = '<phase_name>'
-cfg['completed_phases'].append('<previous_phase>')
-with open('planning/config.json', 'w') as f:
-    json.dump(cfg, f, indent=2)
-"
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh write . current_phase <phase_name>
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh append . completed_phases <previous_phase>
 ```
 
 ### Task List
@@ -348,48 +348,24 @@ Maintain task list items for each phase and section. Update task status as work 
 
 ### Detecting Existing State
 
-On re-invocation, check for existing pipeline artifacts before starting fresh:
+On re-invocation, check `.ralph-state/` for prior state:
 
-1. Check if `planning/` directory exists.
-2. Check if `.claude/angry-ralph.local.md` exists and read its fields.
-3. Check if `planning/config.json` exists.
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh check_done . architect
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh check_done . review
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh check_done . execute
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh read . current_phase
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh read . completed_sections
+```
 
-### Validation Before Resume
+Also check if `.ralph-state/loop.md` exists with `active=true` for mid-section resume.
 
-Before reading state or config files for resume, validate their integrity:
+### Resume Logic
 
-1. **State file**: Check for two `---` markers and required fields (`active`, `phase`, `completion_promise`). If invalid, offer start-fresh.
-2. **Config.json**: Validate as JSON with `python3 -m json.tool`. If invalid, offer start-fresh.
-
-Never attempt to resume from corrupted files — always offer a clean restart.
-
-### Resume from State File
-
-If the state file exists with `active=true`:
-
-- Read the `phase` field to determine the current pipeline phase.
-- Read `current_section` to determine position within the execute phase.
-- Resume from the exact point indicated. Do not repeat completed work.
-
-### Resume from File Artifacts
-
-If planning files exist but no state file is present:
-
-- Check for `planning/angry-ralph-plan.md` -- if present, Phase 1 and Phase 2 are complete.
-- Check for `planning/reviews/` directories -- if present, count completed review iterations.
-- Check for `planning/sections/index.md` -- if present, Phase 4 (SPLIT) is complete.
-- Check for `feat(section-NN)` commits in git log -- determine which sections have been executed.
-- Reconstruct the pipeline position from these artifacts and resume accordingly.
-
-### Recovery After `/clear`
-
-After a `/clear` command resets conversation context:
-
-- Read the task list to reconstruct workflow position.
-- Read the state file for current phase and section.
-- Read `planning/config.json` for session configuration.
-- Combine these sources to resume without repeating completed work.
-- Report the detected state to the user before continuing.
+- `.done` markers determine which phases are complete
+- `pipeline.json` `current_phase` and `completed_sections` provide finer-grained resume
+- Active `loop.md` indicates mid-section TDD resume
+- Offer user choice: resume or start fresh
 
 ## Additional Resources
 

@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STATE_LIB="$SCRIPT_DIR/../scripts/lib/state.sh"
 TEST_DIR=$(mktemp -d)
-STATE_FILE="$TEST_DIR/.claude/angry-ralph.local.md"
+STATE_FILE="$TEST_DIR/.ralph-state/loop.md"
 PASS=0
 FAIL=0
 
@@ -29,7 +29,7 @@ assert_eq() {
 source "$STATE_LIB"
 
 # Test 1: create_state_file creates the file with correct frontmatter
-mkdir -p "$TEST_DIR/.claude"
+mkdir -p "$TEST_DIR/.ralph-state"
 create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
 
 assert_eq "state file exists" "true" "$([ -f "$STATE_FILE" ] && echo true || echo false)"

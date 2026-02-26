@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOOK="$SCRIPT_DIR/../hooks/stop-hook.sh"
 STATE_LIB="$SCRIPT_DIR/../scripts/lib/state.sh"
 TEST_DIR=$(mktemp -d)
-STATE_FILE="$TEST_DIR/.claude/angry-ralph.local.md"
+STATE_FILE="$TEST_DIR/.ralph-state/loop.md"
 PASS=0
 FAIL=0
 
@@ -65,7 +65,7 @@ OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"","cwd":"'"$TE
 assert_empty "no state file → empty stdout (allow)" "$OUTPUT"
 
 # ---- Test 2: State file with phase=execute, no promise → blocks (JSON stdout) ----
-mkdir -p "$TEST_DIR/.claude"
+mkdir -p "$TEST_DIR/.ralph-state"
 create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
 
 TRANSCRIPT="$TEST_DIR/transcript.jsonl"
@@ -146,12 +146,11 @@ assert_contains "wrong promise for swapped state → block value" '"block"' "$OU
 
 # ---- Test 8: TDD cap reached → allow exit (no promise needed) ----
 rm -f "$STATE_FILE"
-mkdir -p "$TEST_DIR/.claude"
+mkdir -p "$TEST_DIR/.ralph-state"
 create_state_file "$STATE_FILE" "execute" "20" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
 
-# Create a config.json with max_tdd_iterations=20
-mkdir -p "$TEST_DIR/planning"
-echo '{"max_tdd_iterations": 20}' > "$TEST_DIR/planning/config.json"
+# Create pipeline.json with max_tdd_iterations=20
+echo '{"max_tdd_iterations": 20}' > "$TEST_DIR/.ralph-state/pipeline.json"
 
 TRANSCRIPT_CAP="$TEST_DIR/transcript_cap.jsonl"
 echo '{"role":"assistant","content":"I cannot make these tests pass"}' > "$TRANSCRIPT_CAP"

@@ -6,7 +6,7 @@ external reviewers, triage their feedback, and iterate until the plan is solid.
 ## Review Tier Detection
 
 Before the first review iteration, determine the active review tier from the environment
-validation output stored in `planning/config.json`:
+validation output stored in `.ralph-state/pipeline.json`:
 
 | Tier | Condition | Reviewers Used |
 |------|-----------|----------------|
@@ -36,7 +36,7 @@ it invokes the available CLIs to perform review. It cannot modify any files.
 
 When spawning, include in the prompt:
 - The active review tier
-- Which reviewers are available (from `config.json` `available_reviewers` field)
+- Which reviewers are available (from `.ralph-state/pipeline.json` `available_reviewers` field)
 - The review type (plan review or final integration review)
 - File paths to review artifacts
 
