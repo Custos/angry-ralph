@@ -77,19 +77,21 @@ remove_state_file() {
   rm -f "$file"
 }
 
-# Dispatch: call the function named by $1, pass remaining args.
+# Dispatch: only when executed directly (not sourced).
 # Allows state.sh to be used as a CLI: bash state.sh read <file> <field>
-CMD="${1:-}"
-shift || true
-case "$CMD" in
-  read)           read_state_field "$@" ;;
-  write)          write_state_field "$@" ;;
-  read_body)      read_state_body "$@" ;;
-  create)         create_state_file "$@" ;;
-  remove)         remove_state_file "$@" ;;
-  "")             ;; # sourced with no args — just define functions
-  *)
-    echo "Usage: state.sh <read|write|read_body|create|remove> [args...]" >&2
-    exit 1
-    ;;
-esac
+# When sourced (e.g., by stop-hook.sh or pipeline.sh), only define functions.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  CMD="${1:-}"
+  shift || true
+  case "$CMD" in
+    read)           read_state_field "$@" ;;
+    write)          write_state_field "$@" ;;
+    read_body)      read_state_body "$@" ;;
+    create)         create_state_file "$@" ;;
+    remove)         remove_state_file "$@" ;;
+    *)
+      echo "Usage: state.sh <read|write|read_body|create|remove> [args...]" >&2
+      exit 1
+      ;;
+  esac
+fi
