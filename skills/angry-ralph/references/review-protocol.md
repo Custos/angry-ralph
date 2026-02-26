@@ -74,6 +74,18 @@ claude -p "<review prompt referencing file paths>" --output-format text
 - The prompt must explicitly state "separate session" and "no prior context" to maximize independence.
 - Write output to `planning/reviews/iteration-N/claude-review.md`.
 
+## Parallel Execution and Fallback
+
+When multiple reviewers are available, run them in parallel to minimize wall-clock time:
+
+1. **Adversarial tier**: Launch gemini and codex simultaneously as background jobs.
+2. **Wait for both**: Collect exit codes.
+3. **Retry on failure**: If a CLI exits with error, retry once. If retry fails, skip and note in output.
+4. **Fallback**: If both external CLIs fail, invoke claude as fallback.
+5. **Collect results**: Merge all successful reviewer outputs, tagged with source.
+
+This ensures review proceeds even when individual CLIs are broken, and maximizes throughput by running reviewers concurrently.
+
 ## Review Output Format
 
 Instruct all CLIs to produce structured markdown with these sections:

@@ -41,6 +41,22 @@ You will be told which review tier is active and which reviewers are available. 
 - NEVER attempt to fix issues yourself. Report findings only.
 - ALWAYS tag every section of output with its source: `[Gemini]`, `[Codex]`, or `[Claude-Reflection]`.
 
+**Execution Strategy:**
+
+When both gemini and codex are available (Adversarial tier), run them in **parallel**:
+
+1. Launch both CLI commands as background jobs.
+2. Wait for both to complete.
+3. If a CLI exits with a non-zero code:
+   a. Retry once.
+   b. If retry also fails, skip that reviewer and note: `[<Reviewer>] SKIPPED — CLI invocation failed after retry.`
+4. If BOTH external CLIs fail: fall back to claude (Self-Reflection).
+5. Collect all successful results and tag with source.
+
+For Partial tier (one CLI + claude): run the available CLI first, then claude. Apply the same retry logic to the CLI.
+
+For Self-Reflection tier: run claude only. No retry needed (claude is always available).
+
 **CLI Invocation Patterns:**
 
 ### Gemini (when available)
@@ -87,6 +103,38 @@ claude -p "You are a senior architect performing an independent integration revi
 
 - The `--output-format text` flag ensures plain text output.
 - The prompt explicitly states "separate session" and "no prior context" to maximize review independence.
+
+### Parallel Execution Pattern (Adversarial Tier)
+
+When running both reviewers, use background jobs:
+
+```bash
+# Launch both in parallel
+gemini -p "<prompt>" --approval-mode plan -o text > planning/reviews/iteration-N/gemini-review.md 2>&1 &
+GEMINI_PID=$!
+
+codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o planning/reviews/iteration-N/codex-review.md &
+CODEX_PID=$!
+
+# Wait and capture exit codes
+wait $GEMINI_PID; GEMINI_EXIT=$?
+wait $CODEX_PID; CODEX_EXIT=$?
+
+# Retry on failure
+if [ $GEMINI_EXIT -ne 0 ]; then
+  gemini -p "<prompt>" --approval-mode plan -o text > planning/reviews/iteration-N/gemini-review.md 2>&1
+  GEMINI_EXIT=$?
+fi
+if [ $CODEX_EXIT -ne 0 ]; then
+  codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o planning/reviews/iteration-N/codex-review.md
+  CODEX_EXIT=$?
+fi
+
+# Fallback if both failed
+if [ $GEMINI_EXIT -ne 0 ] && [ $CODEX_EXIT -ne 0 ]; then
+  claude -p "<prompt>" --output-format text > planning/reviews/iteration-N/claude-review.md 2>&1
+fi
+```
 
 **Output Format:**
 
