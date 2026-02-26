@@ -25,22 +25,29 @@ If you're extending review or planning logic, reading those repos first will giv
 
 ```bash
 git clone https://github.com/Custos/angry-ralph.git
-cd angry-ralph
 
 # Run all tests
-for t in tests/test-*.sh; do bash "$t"; done
+for t in ./angry-ralph/tests/test-*.sh; do bash "$t"; done
 
 # Validate environment
-bash scripts/checks/validate-env.sh
+bash ./angry-ralph/scripts/checks/validate-env.sh
 ```
 
 ### Local Plugin Testing
 
-Load the plugin into Claude Code directly from your working copy:
+Load the plugin into Claude Code from your working copy:
 
 ```bash
-claude --plugin-dir .
+claude --plugin-dir ./angry-ralph
 ```
+
+For fully autonomous loop execution (no permission prompts):
+
+```bash
+claude --plugin-dir ./angry-ralph --dangerously-skip-permissions
+```
+
+> **Note:** `--dangerously-skip-permissions` is practically necessary for the Ralph Loop to run without interruption, but it grants unrestricted filesystem and shell access. Use in isolated environments.
 
 Then test commands (`/angry-ralph`, `/cancel-ralph`, `/angry-ralph-help`) in the session.
 

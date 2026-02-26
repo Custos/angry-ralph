@@ -69,6 +69,8 @@ assert_exists "hooks.json" "hooks/hooks.json"
 assert_exists "stop-hook.sh" "hooks/stop-hook.sh"
 assert_contains "hooks.json references stop hook" "hooks/hooks.json" "stop-hook.sh"
 assert_contains "hooks.json uses CLAUDE_PLUGIN_ROOT" "hooks/hooks.json" "CLAUDE_PLUGIN_ROOT"
+assert_contains "hooks.json has Stop event" "hooks/hooks.json" '"Stop"'
+assert_contains "hooks.json has SubagentStop event" "hooks/hooks.json" '"SubagentStop"'
 
 # Scripts
 assert_exists "validate-env.sh" "scripts/checks/validate-env.sh"

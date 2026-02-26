@@ -1,6 +1,6 @@
 # Loop Protocol: Execute Phase
 
-Reference protocol for the Ralph Loop state machine during Phase 5 (EXECUTE). The loop uses a state file and Stop hook to create an iterative execution cycle that enforces TDD-gated section completion.
+Reference protocol for the Ralph Loop state machine during Phase 5 (EXECUTE). The loop uses a state file and Stop/SubagentStop hooks to create an iterative execution cycle that enforces TDD-gated section completion. Each section is dispatched to a fresh subagent, and the SubagentStop hook gates its exit.
 
 ---
 
@@ -43,12 +43,13 @@ The prompt text that gets fed back on each loop iteration.
 ## Loop Lifecycle
 
 1. **Activate** — Create or update the state file with `phase=execute` and set `current_section`.
-2. **Iterate** — Work on the section: write tests first, then write implementation to pass them.
-3. **Exit attempt** — The session attempts to stop after completing work.
-4. **Stop hook intercepts** — Read the state file and check the transcript for the completion promise.
-5. **Promise found** — Allow exit. Proceed to atomic commit.
-6. **Promise not found** — Block exit. Increment `iteration` and feed back the prompt body.
-7. **Successful exit** — Perform an atomic commit and advance to the next section.
+2. **Dispatch** — Dispatch a fresh subagent with the section spec, TDD protocol, and test runner command.
+3. **Iterate** — The subagent works on the section: writes tests first, then implements to pass them.
+4. **Exit attempt** — The subagent attempts to stop after completing work.
+5. **SubagentStop hook intercepts** — Read the state file and check the transcript for the completion promise.
+6. **Promise found** — Allow exit. Proceed to atomic commit.
+7. **Promise not found** — Block exit. Increment `iteration` and feed back the prompt body.
+8. **Successful exit** — Perform an atomic commit and advance to the next section.
 
 ---
 
@@ -63,7 +64,8 @@ To start the loop for a given section:
    - `iteration=1`
    - `current_section=section-NN-name`
    - `completion_promise=SECTION_COMPLETE`
-4. The Stop hook is now active and will intercept all exit attempts.
+4. Dispatch a fresh subagent via the Task tool with the prompt body as the task prompt.
+5. The SubagentStop hook is now active and will intercept the subagent's exit attempts.
 
 ---
 

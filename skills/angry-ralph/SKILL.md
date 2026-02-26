@@ -160,13 +160,26 @@ completion_promise: SECTION_COMPLETE
 
 Set `spec_file` and `planning_dir` to the resolved paths. Populate the prompt body with the section spec content and TDD instructions.
 
-### 2. Follow TDD: Red-Green Cycle
+### 2. Dispatch Section to Subagent
+
+Dispatch each section's implementation to a **fresh subagent** via the Task tool. The subagent receives:
+
+- The full section spec content
+- The test runner command
+- The TDD protocol (red-green cycle rules)
+- Instructions to output `SECTION_COMPLETE` only when all tests pass
+
+The main session stays lean — it manages coordination, state transitions, and section dispatch. The subagent gets a clean context window with no accumulated history from prior sections or planning phases.
+
+The **SubagentStop hook** (registered alongside the Stop hook, both pointing to the same `stop-hook.sh`) gates the subagent's exit. If the completion promise is not found in the subagent's transcript, the hook blocks exit and feeds back the section prompt for another iteration.
+
+### 3. Follow TDD: Red-Green Cycle
 
 **Red phase** -- Write test cases that verify the expected behavior described in the section spec. Run the test suite and confirm the tests fail. If any test passes before implementation exists, rewrite the test to exercise the unimplemented behavior.
 
 **Green phase** -- Write the minimum code needed to make all failing tests pass. Run the test suite and confirm all tests pass. If tests fail, debug and fix the implementation -- not the tests. Repeat until every assertion is green.
 
-### 3. Completion Gate
+### 4. Completion Gate
 
 Output the completion promise `SECTION_COMPLETE` only when ALL of the following hold:
 
@@ -175,17 +188,15 @@ Output the completion promise `SECTION_COMPLETE` only when ALL of the following 
 - No compilation or runtime errors during test execution
 - The implementation satisfies the section spec's acceptance criteria
 
-The stop hook intercepts exit attempts and checks the transcript for the completion promise. If the promise is not found, the hook blocks exit and feeds back the section prompt for another iteration.
+### 5. Atomic Commit
 
-### 4. Atomic Commit
-
-After a section passes all tests and the stop hook permits exit:
+After a section passes all tests and the hook permits exit:
 
 - Stage only the files changed for the completed section
 - Commit with message format: `feat(section-NN): <section-name>`
 - Do not stage unrelated files or amend previous commits
 
-### 5. Advance to Next Section
+### 6. Advance to Next Section
 
 Update the state file: set `current_section` to the next section, reset `iteration` to 1, and replace the prompt body with the next section's spec. If no sections remain, proceed to Phase 6.
 

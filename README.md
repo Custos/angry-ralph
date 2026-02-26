@@ -27,16 +27,21 @@ Every phase produces persistent artifacts on disk. If the session is interrupted
 
 ## Prerequisites
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (CLI)
-- [Gemini CLI](https://github.com/google-gemini/gemini-cli) (`gemini` in PATH)
-- [Codex CLI](https://github.com/openai/codex) (`codex` in PATH)
+**Required:**
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`claude` in PATH)
 - `git`
 - `python3`
 
-Verify everything is ready:
+**Optional (upgrades review tier):**
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli) (`gemini` in PATH)
+- [Codex CLI](https://github.com/openai/codex) (`codex` in PATH)
+
+angry-ralph works out-of-the-box with only the required tools. External CLIs upgrade the review from Self-Reflection (Claude reviewing its own work in a fresh session) to Adversarial (cross-model scrutiny).
+
+Verify your environment:
 
 ```bash
-bash scripts/checks/validate-env.sh
+bash ./angry-ralph/scripts/checks/validate-env.sh
 ```
 
 ## Quick Start
@@ -45,14 +50,23 @@ bash scripts/checks/validate-env.sh
 
 ```bash
 git clone https://github.com/Custos/angry-ralph.git
-cd angry-ralph
 ```
 
 ### 2. Launch Claude Code with the plugin
 
+From your **target project directory** (where the code will be built):
+
 ```bash
-claude --plugin-dir .
+claude --plugin-dir ./angry-ralph
 ```
+
+Or for fully autonomous execution (no permission prompts):
+
+```bash
+claude --plugin-dir ./angry-ralph --dangerously-skip-permissions
+```
+
+> **Warning:** `--dangerously-skip-permissions` gives Claude unrestricted access to your filesystem, shell, and network. The Ralph Loop is designed to run autonomously and will hit permission prompts repeatedly without this flag, but you should understand the risk. Use in isolated environments or repositories you trust. The TDD gate and fail-closed Stop hook provide safety at the execution level, but they do not replace filesystem-level caution.
 
 ### 3. Run against your spec
 
@@ -89,7 +103,7 @@ The current working directory should be a git repo (or angry-ralph will offer to
 │   ├── cancel-ralph.md          # Loop cancellation
 │   └── help.md                  # Usage docs
 ├── hooks/
-│   ├── hooks.json               # Stop hook registration
+│   ├── hooks.json               # Stop + SubagentStop hook registration
 │   └── stop-hook.sh             # TDD-gated exit interceptor
 ├── scripts/
 │   ├── checks/
@@ -116,7 +130,7 @@ The current working directory should be a git repo (or angry-ralph will offer to
 
 **External Reviewer Agent** — A sandboxed subagent restricted to `Bash` and `Read` tools only. It invokes `gemini` and `codex` via CLI subprocesses, passing file paths (never stdin). The CLIs read spec/plan/code files from disk and write review output to the `planning/reviews/` directory.
 
-**Ralph Loop (Stop Hook)** — During the EXECUTE phase, the Stop hook intercepts every attempt to exit. It checks a state file (`.claude/angry-ralph.local.md`) and the session transcript for a completion promise (`SECTION_COMPLETE`). If the promise isn't found in the last assistant message, the hook blocks exit and feeds the section prompt back — forcing the loop to continue until tests pass. The hook is fail-closed: if transcript parsing fails, it blocks rather than allowing a premature exit.
+**Ralph Loop (Stop + SubagentStop Hooks)** — During the EXECUTE phase, both the Stop and SubagentStop hooks intercept exit attempts. Each section is dispatched to a fresh subagent with clean context, and the SubagentStop hook gates its completion. The hook checks a state file (`.claude/angry-ralph.local.md`) and the session transcript for a completion promise (`SECTION_COMPLETE`). If the promise isn't found in the last assistant message, the hook blocks exit and feeds the section prompt back — forcing the loop to continue until tests pass. The hook is fail-closed: if transcript parsing fails, it blocks rather than allowing a premature exit. The main session stays lean, managing only coordination and section transitions.
 
 **State Management** — A YAML-frontmatter markdown file tracks loop state (phase, iteration, current section, completion promise). The `state.sh` library provides portable read/write functions using `awk` (no BSD-specific `sed -i`).
 
@@ -167,7 +181,7 @@ Or all at once:
 for t in tests/test-*.sh; do echo "=== $t ==="; bash "$t"; echo; done
 ```
 
-**62 tests** across 4 suites covering state management, environment validation, stop hook behavior (including fail-closed on corrupt transcripts), and plugin structure integrity.
+**68 tests** across 4 suites covering state management, environment validation, stop hook behavior (including fail-closed on corrupt transcripts), and plugin structure integrity.
 
 ## Planning Artifacts
 
