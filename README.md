@@ -68,7 +68,7 @@ claude --plugin-dir /path/to/angry-ralph --dangerously-skip-permissions
 
 > **Warning:** `--dangerously-skip-permissions` gives Claude unrestricted access to your filesystem, shell, and network. The Ralph Loop is designed to run autonomously and will hit permission prompts repeatedly without this flag, but you should understand the risk. Use in isolated environments or repositories you trust. The TDD gate and fail-closed Stop hook provide safety at the execution level, but they do not replace filesystem-level caution.
 
-### 3. Run against your spec
+### Run against your spec
 
 ```
 /angry-ralph @path/to/your-spec.md
