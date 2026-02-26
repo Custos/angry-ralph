@@ -144,6 +144,23 @@ OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"'"$TRANSCRIPT5
 assert_contains "wrong promise for swapped state → block" '"decision"' "$OUTPUT"
 assert_contains "wrong promise for swapped state → block value" '"block"' "$OUTPUT"
 
+# ---- Test 8: TDD cap reached → allow exit (no promise needed) ----
+rm -f "$STATE_FILE"
+mkdir -p "$TEST_DIR/.claude"
+create_state_file "$STATE_FILE" "execute" "20" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+
+# Create a config.json with max_tdd_iterations=20
+mkdir -p "$TEST_DIR/planning"
+echo '{"max_tdd_iterations": 20}' > "$TEST_DIR/planning/config.json"
+
+TRANSCRIPT_CAP="$TEST_DIR/transcript_cap.jsonl"
+echo '{"role":"assistant","content":"I cannot make these tests pass"}' > "$TRANSCRIPT_CAP"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"'"$TRANSCRIPT_CAP"'","cwd":"'"$TEST_DIR"'"}')
+assert_contains "tdd cap reached → allow with cap_reached" '"decision"' "$OUTPUT"
+assert_contains "tdd cap reached → decision is allow" '"allow"' "$OUTPUT"
+assert_contains "tdd cap reached → has tdd_cap_reached" "tdd_cap_reached" "$OUTPUT"
+
 # Summary
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

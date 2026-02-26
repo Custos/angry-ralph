@@ -28,6 +28,19 @@ ITERATION=$(read_state_field "$STATE_FILE" "iteration")
 CURRENT_SECTION=$(read_state_field "$STATE_FILE" "current_section")
 COMPLETION_PROMISE=$(read_state_field "$STATE_FILE" "completion_promise")
 
+# Read TDD iteration cap from config.json (if it exists)
+MAX_TDD_ITERATIONS=""
+CONFIG_FILE="$PROJECT_DIR/planning/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+  MAX_TDD_ITERATIONS=$(python3 -c "
+import json, sys
+try:
+    cfg = json.load(open(sys.argv[1]))
+    print(cfg.get('max_tdd_iterations', ''))
+except: print('')
+" "$CONFIG_FILE" 2>/dev/null) || true
+fi
+
 # 3. If active=false → allow exit
 if [ "$ACTIVE" != "true" ]; then
   exit 0
@@ -90,6 +103,20 @@ fi
 
 # 6. If promise found → allow exit
 if [ "$PROMISE_FOUND" = "true" ]; then
+  exit 0
+fi
+
+# 6b. Check TDD iteration cap — if iteration >= cap, allow exit with cap_reached signal
+if [ -n "$MAX_TDD_ITERATIONS" ] && [ "$ITERATION" -ge "$MAX_TDD_ITERATIONS" ]; then
+  python3 -c "
+import json
+print(json.dumps({
+    'decision': 'allow',
+    'tdd_cap_reached': True,
+    'reason': 'TDD iteration cap reached. Section needs user review.',
+    'systemMessage': 'angry-ralph: TDD iteration cap ($MAX_TDD_ITERATIONS) reached for $CURRENT_SECTION. Tests have not passed after $ITERATION iterations. Ask the user what to do.'
+}))
+"
   exit 0
 fi
 
