@@ -150,29 +150,29 @@ The current working directory should be a git repo (or angry-ralph will offer to
 ## How the Review Loop Works
 
 ```
-┌─────────────┐
+┌──────────────┐
 │  Plan/Code   │
-└──────┬──────┘
+└──────┬───────┘
        │
        v
-┌─────────────┐     ┌─────────────┐
-│  gemini CLI  │     │  codex CLI   │
-│  (review)    │     │  (review)    │
-└──────┬──────┘     └──────┬──────┘
-       │                    │
-       v                    v
-┌──────────────────────────────┐
-│     Claude Triages Findings   │
-│  ┌─────────┐  ┌────────────┐ │
-│  │Auto-fix │  │AskUser for │ │
-│  │clear    │  │genuine     │ │
-│  │issues   │  │ambiguity   │ │
-│  └─────────┘  └────────────┘ │
-└──────────────┬───────────────┘
-               │
-               v
-        Iterate or proceed
-     (max N iterations, default 3)
+┌──────────────┐    ┌──────────────┐
+│  gemini CLI  │    │  codex CLI   │
+│  (review)    │    │  (review)    │
+└──────┬───────┘    └──────┬───────┘
+       │                   │
+       v                   v
+┌──────────────────────────────────┐
+│     Claude Triages Findings      │
+│  ┌───────────┐  ┌──────────────┐ │
+│  │ Auto-fix  │  │ AskUser for  │ │
+│  │ clear     │  │ genuine      │ │
+│  │ issues    │  │ ambiguity    │ │
+│  └───────────┘  └──────────────┘ │
+└────────────────┬─────────────────┘
+                 │
+                 v
+          Iterate or proceed
+       (max N iterations, default 3)
 ```
 
 Findings are triaged by Claude: clear issues get auto-fixed, genuine ambiguities are surfaced to you via `AskUserQuestion`. The loop runs until both reviewers approve or the iteration cap is reached.
