@@ -345,6 +345,15 @@ On re-invocation, check for existing pipeline artifacts before starting fresh:
 2. Check if `.claude/angry-ralph.local.md` exists and read its fields.
 3. Check if `planning/config.json` exists.
 
+### Validation Before Resume
+
+Before reading state or config files for resume, validate their integrity:
+
+1. **State file**: Check for two `---` markers and required fields (`active`, `phase`, `completion_promise`). If invalid, offer start-fresh.
+2. **Config.json**: Validate as JSON with `python3 -m json.tool`. If invalid, offer start-fresh.
+
+Never attempt to resume from corrupted files — always offer a clean restart.
+
 ### Resume from State File
 
 If the state file exists with `active=true`:

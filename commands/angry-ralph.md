@@ -64,7 +64,36 @@ Check for evidence of a prior angry-ralph run:
 If **either** artifact exists:
 
 - Read `planning/config.json` if it exists to determine the last recorded phase.
+
+  **Validate config.json integrity** before parsing. Run:
+
+  ```bash
+  python3 -m json.tool planning/config.json > /dev/null 2>&1
+  ```
+
+  If exit code is non-zero, report: "Config file is corrupted." and offer start-fresh.
+
 - Read `.claude/angry-ralph.local.md` if it exists to determine active state.
+
+  **Validate state file integrity** before reading fields. Check that the file contains opening and closing `---` markers and at least the `active`, `phase`, and `completion_promise` fields. Run:
+
+  ```bash
+  python3 -c "
+  import sys
+  content = open(sys.argv[1]).read()
+  markers = content.count('---')
+  if markers < 2:
+      print('invalid')
+      sys.exit(0)
+  for field in ['active:', 'phase:', 'completion_promise:']:
+      if field not in content:
+          print('invalid')
+          sys.exit(0)
+  print('valid')
+  " .claude/angry-ralph.local.md
+  ```
+
+  If the output is `invalid`, report: "State file is corrupted. Starting fresh is recommended." Include this in the AskUserQuestion options alongside "Resume" and "Start fresh".
 - Inform the user that a previous run was detected and summarize its state (phase, section if applicable).
 - Ask the user via AskUserQuestion: "Resume the previous run, or start fresh? (Starting fresh will delete existing planning artifacts.)"
 - If the user chooses **resume**: skip to the appropriate phase based on detected state. Consult the angry-ralph skill's Resume & Recovery section for the full procedure.
