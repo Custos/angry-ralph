@@ -22,7 +22,7 @@ If no `@file.md` argument is provided, report an error and display usage:
 ```
 Error: No spec file provided.
 
-Usage: /angry-ralph @spec-file.md [--max-review-iterations N] [--max-section-review-iterations N]
+Usage: /angry-ralph @spec-file.md [options]
 
   @spec-file.md                    Path to the input specification file (required)
   --max-review-iterations N        Max review loop iterations (default: 3)
