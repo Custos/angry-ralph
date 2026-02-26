@@ -95,6 +95,7 @@ After each section passes all tests:
 2. Create a commit with message format: `feat(section-NN): <section-name>`.
 3. Do not stage unrelated files.
 4. Do not amend previous commits.
+5. If `git commit` returns a non-zero exit code, do not proceed. Escalate to the user via `AskUserQuestion` with the git error message. Wait for user resolution before advancing.
 
 ---
 

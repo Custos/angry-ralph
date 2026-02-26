@@ -227,11 +227,20 @@ Consult `references/section-review-protocol.md` for the full review checklist, s
 
 ### 6. Atomic Commit
 
-After a section passes all tests, the review gate clears, and the hook permits exit:
+After a section passes all tests and the review gate clears:
 
 - Stage only the files changed for the completed section
 - Commit with message format: `feat(section-NN): <section-name>`
 - Do not stage unrelated files or amend previous commits
+
+**If the commit fails** (non-zero exit code from `git commit`):
+
+1. Read the git error output.
+2. Ask the user via `AskUserQuestion`: "Commit failed for section-NN: <git error summary>. Options: resolve manually and retry, or skip commit and continue?"
+3. If the user resolves manually: verify commit succeeded with `git log -1`, then proceed.
+4. If the user skips: log the skip, advance to the next section. The section's code remains unstaged.
+
+Do not silently ignore commit failures. Do not proceed to the next section until the commit succeeds or the user explicitly skips.
 
 ### 7. Advance to Next Section
 
