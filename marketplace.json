@@ -1,0 +1,11 @@
+{
+  "name": "custos-plugins",
+  "owner": { "name": "Custos" },
+  "plugins": [
+    {
+      "name": "angry-ralph",
+      "source": ".",
+      "description": "Unified multi-LLM planning with adversarial review and TDD execution via Ralph Loop"
+    }
+  ]
+}

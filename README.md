@@ -1,14 +1,14 @@
 # angry-ralph
 
-A Claude Code plugin that transforms a feature spec into a fully implemented, reviewed, and tested codebase — using adversarial multi-LLM review and TDD-gated execution.
+A Claude Code plugin that transforms a feature spec into a fully implemented, reviewed, and tested codebase, using adversarial multi-LLM review and TDD-gated execution.
 
 > **Built on the shoulders of giants.** angry-ralph unifies and extends three foundational projects by [piercelamb](https://github.com/piercelamb):
 >
-> - [**deep-project**](https://github.com/piercelamb/deep-project) — Feature decomposition and stakeholder interviews
-> - [**deep-plan**](https://github.com/piercelamb/deep-plan) — Detailed implementation planning with section-level specs
-> - [**deep-implement**](https://github.com/piercelamb/deep-implement) — TDD execution with strict red-green cycles
+> - [**deep-project**](https://github.com/piercelamb/deep-project) - Feature decomposition and stakeholder interviews
+> - [**deep-plan**](https://github.com/piercelamb/deep-plan) - Detailed implementation planning with section-level specs
+> - [**deep-implement**](https://github.com/piercelamb/deep-implement) - TDD execution with strict red-green cycles
 >
-> angry-ralph combines all three into a single self-contained plugin, adds adversarial review via Gemini and Codex CLIs, and enforces execution with a built-in [Ralph Wiggum Loop](https://github.com/anthropics/claude-code/blob/main/HOOKS.md) — a Stop hook that blocks exit until tests pass.
+> angry-ralph combines all three into a single self-contained plugin, adds adversarial review via Gemini and Codex CLIs, and enforces execution with a built-in [Ralph Wiggum Loop](https://github.com/anthropics/claude-code/blob/main/HOOKS.md), a Stop hook that blocks exit until tests pass.
 
 ## What It Does
 
@@ -20,7 +20,7 @@ Give angry-ralph a spec file and it runs a 6-phase pipeline:
 | **2. PLAN** | Writes a detailed implementation plan with numbered sections |
 | **3. ADVERSARIAL REVIEW** | Dispatches Gemini and Codex CLIs to review the plan, triages findings, iterates up to N times |
 | **4. SPLIT** | Finalizes the plan into individual section spec files |
-| **5. EXECUTE** | TDD Ralph Loop per section — tests first, implement, all tests pass, atomic commit |
+| **5. EXECUTE** | TDD Ralph Loop per section: tests first, implement, all tests pass, atomic commit |
 | **6. FINAL REVIEW** | External LLMs review the completed codebase for integration issues |
 
 Every phase produces persistent artifacts on disk. If the session is interrupted, re-running the command detects prior state and offers to resume.
@@ -46,17 +46,17 @@ bash /path/to/angry-ralph/scripts/checks/validate-env.sh
 
 ## Quick Start
 
-### 1. Clone
+### Option A: Install via Marketplace
+
+```
+/plugin marketplace add Custos/angry-ralph
+/plugin install angry-ralph@custos-plugins
+```
+
+### Option B: Load from Local Path
 
 ```bash
 git clone https://github.com/Custos/angry-ralph.git
-```
-
-### 2. Launch Claude Code with the plugin
-
-From your **target project directory** (where the code will be built):
-
-```bash
 claude --plugin-dir /path/to/angry-ralph
 ```
 
@@ -128,11 +128,11 @@ The current working directory should be a git repo (or angry-ralph will offer to
 
 ### Key Components
 
-**External Reviewer Agent** — A sandboxed subagent restricted to `Bash` and `Read` tools only. It invokes `gemini` and `codex` via CLI subprocesses, passing file paths (never stdin). The CLIs read spec/plan/code files from disk and write review output to the `planning/reviews/` directory.
+**External Reviewer Agent** - A sandboxed subagent restricted to `Bash` and `Read` tools only. It invokes `gemini` and `codex` via CLI subprocesses, passing file paths (never stdin). The CLIs read spec/plan/code files from disk and write review output to the `planning/reviews/` directory.
 
-**Ralph Loop (Stop + SubagentStop Hooks)** — During the EXECUTE phase, both the Stop and SubagentStop hooks intercept exit attempts. Each section is dispatched to a fresh subagent with clean context, and the SubagentStop hook gates its completion. The hook checks a state file (`.claude/angry-ralph.local.md`) and the session transcript for a completion promise (`SECTION_COMPLETE`). If the promise isn't found in the last assistant message, the hook blocks exit and feeds the section prompt back — forcing the loop to continue until tests pass. The hook is fail-closed: if transcript parsing fails, it blocks rather than allowing a premature exit. The main session stays lean, managing only coordination and section transitions.
+**Ralph Loop (Stop + SubagentStop Hooks)** - During the EXECUTE phase, both the Stop and SubagentStop hooks intercept exit attempts. Each section is dispatched to a fresh subagent with clean context, and the SubagentStop hook gates its completion. The hook checks a state file (`.claude/angry-ralph.local.md`) and the session transcript for a completion promise (`SECTION_COMPLETE`). If the promise isn't found in the last assistant message, the hook blocks exit and feeds the section prompt back, forcing the loop to continue until tests pass. The hook is fail-closed: if transcript parsing fails, it blocks rather than allowing a premature exit. The main session stays lean, managing only coordination and section transitions.
 
-**State Management** — A YAML-frontmatter markdown file tracks loop state (phase, iteration, current section, completion promise). The `state.sh` library provides portable read/write functions using `awk` (no BSD-specific `sed -i`).
+**State Management** - A YAML-frontmatter markdown file tracks loop state (phase, iteration, current section, completion promise). The `state.sh` library provides portable read/write functions using `awk` (no BSD-specific `sed -i`).
 
 ## How the Review Loop Works
 
@@ -162,7 +162,7 @@ The current working directory should be a git repo (or angry-ralph will offer to
      (max N iterations, default 3)
 ```
 
-Findings are triaged by Claude — clear issues get auto-fixed, genuine ambiguities are surfaced to you via `AskUserQuestion`. The loop runs until both reviewers approve or the iteration cap is reached.
+Findings are triaged by Claude: clear issues get auto-fixed, genuine ambiguities are surfaced to you via `AskUserQuestion`. The loop runs until both reviewers approve or the iteration cap is reached.
 
 ## Testing
 
@@ -211,7 +211,7 @@ These artifacts persist across sessions, enabling resume after interruptions.
 
 These are non-negotiable design decisions baked into the plugin:
 
-1. **External reviewer tools**: `Bash` and `Read` only — no file writes from review agents
+1. **External reviewer tools**: `Bash` and `Read` only - no file writes from review agents
 2. **CLI invocation**: File paths as arguments, never stdin piping
 3. **Triage with user input**: Ambiguous review findings always surface via `AskUserQuestion`
 4. **TDD enforcement**: Tests written before implementation, must fail first, must pass before commit
@@ -231,8 +231,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and contr
 
 This project would not exist without the deep-series by [piercelamb](https://github.com/piercelamb):
 
-- [deep-project](https://github.com/piercelamb/deep-project) — The decomposition and interview methodology
-- [deep-plan](https://github.com/piercelamb/deep-plan) — The section-based planning approach and multi-LLM review concept
-- [deep-implement](https://github.com/piercelamb/deep-implement) — The TDD execution discipline and atomic commit strategy
+- [deep-project](https://github.com/piercelamb/deep-project) - The decomposition and interview methodology
+- [deep-plan](https://github.com/piercelamb/deep-plan) - The section-based planning approach and multi-LLM review concept
+- [deep-implement](https://github.com/piercelamb/deep-implement) - The TDD execution discipline and atomic commit strategy
 
 angry-ralph stands on these foundations and adds the Ralph Loop execution engine, unified plugin packaging, and cross-platform hardening.
