@@ -1,22 +1,22 @@
 ---
-name: review-section
+name: angry-review-section
 description: Run on-demand adversarial review of a specific section's implementation against its spec
 ---
 
-# /review-section Command
+# /angry-review-section Command
 
 Run an adversarial review of a **specific section's implementation** against its section spec and the overall plan. Useful for targeted validation of individual sections.
 
 ## Usage
 
 ```
-/review-section <section-name-or-number>
+/angry-review-section <section-name-or-number>
 ```
 
 Examples:
-- `/review-section section-01-auth`
-- `/review-section 3`
-- `/review-section section-05-password-auth`
+- `/angry-review-section section-01-auth`
+- `/angry-review-section 3`
+- `/angry-review-section section-05-password-auth`
 
 If no argument is provided, list all available sections from `planning/sections/index.md` and ask the user to pick one via `AskUserQuestion`.
 

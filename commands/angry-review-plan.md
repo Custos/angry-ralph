@@ -1,9 +1,9 @@
 ---
-name: review-plan
+name: angry-review-plan
 description: Run on-demand adversarial review of the implementation plan
 ---
 
-# /review-plan Command
+# /angry-review-plan Command
 
 Run an adversarial plan review at any time — same as Phase 3 but invokable on-demand. Reviews the **implementation plan** using the external-reviewer infrastructure.
 

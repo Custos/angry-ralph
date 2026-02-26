@@ -1,9 +1,9 @@
 ---
-name: review-code
+name: angry-review-code
 description: Run on-demand adversarial review of the current codebase against the implementation plan
 ---
 
-# /review-code Command
+# /angry-review-code Command
 
 Run an adversarial code review at any time — outside the normal Phase 3/6 pipeline gates. This reviews the **current codebase** against the **implementation plan**, using the same external-reviewer infrastructure.
 
@@ -37,7 +37,7 @@ Reviewers: <comma-separated list>
 
 ### 3. Determine Scope
 
-Identify what to review. By default, review all source files (exclude `planning/`, `node_modules/`, `.git/`, test fixtures). If the user provided arguments after `/review-code`, treat them as file paths or glob patterns to narrow scope.
+Identify what to review. By default, review all source files (exclude `planning/`, `node_modules/`, `.git/`, test fixtures). If the user provided arguments after `/angry-review-code`, treat them as file paths or glob patterns to narrow scope.
 
 ### 4. Spawn External Reviewer
 

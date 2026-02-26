@@ -94,9 +94,9 @@ The current working directory should be a git repo (or angry-ralph will offer to
 |---------|-------------|
 | `/angry-ralph @spec.md` | Start the 6-phase pipeline against a spec file |
 | `/cancel-ralph` | Cancel an active Ralph Loop and remove state |
-| `/review-code` | On-demand adversarial review of code against the plan |
-| `/review-plan` | On-demand adversarial review of the implementation plan |
-| `/review-section <name>` | On-demand adversarial review of a specific section |
+| `/angry-review-code` | On-demand adversarial review of code against the plan |
+| `/angry-review-plan` | On-demand adversarial review of the implementation plan |
+| `/angry-review-section <name>` | On-demand adversarial review of a specific section |
 | `/angry-ralph-help` | Show usage, workflow overview, and prerequisites |
 
 ## Architecture
@@ -110,9 +110,9 @@ The current working directory should be a git repo (or angry-ralph will offer to
 ├── commands/
 │   ├── angry-ralph.md           # Main pipeline entry point
 │   ├── cancel-ralph.md          # Loop cancellation
-│   ├── review-code.md           # On-demand code review
-│   ├── review-plan.md           # On-demand plan review
-│   ├── review-section.md        # On-demand section review
+│   ├── angry-review-code.md     # On-demand code review
+│   ├── angry-review-plan.md     # On-demand plan review
+│   ├── angry-review-section.md  # On-demand section review
 │   └── help.md                  # Usage docs
 ├── hooks/
 │   ├── hooks.json               # Stop + SubagentStop hook registration

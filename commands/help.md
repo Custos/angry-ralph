@@ -15,9 +15,9 @@ angry-ralph is a unified multi-LLM planning and TDD execution pipeline. It trans
 |---------|-------------|
 | `/angry-ralph @spec.md [options]` | Start the pipeline against a spec file |
 | `/cancel-ralph` | Cancel the active Ralph Loop |
-| `/review-code` | On-demand adversarial review of code against the plan |
-| `/review-plan` | On-demand adversarial review of the implementation plan |
-| `/review-section <name-or-number>` | On-demand adversarial review of a specific section |
+| `/angry-review-code` | On-demand adversarial review of code against the plan |
+| `/angry-review-plan` | On-demand adversarial review of the implementation plan |
+| `/angry-review-section <name-or-number>` | On-demand adversarial review of a specific section |
 | `/angry-ralph-help` | Show this help |
 
 ## The 6-Phase Workflow
