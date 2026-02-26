@@ -36,6 +36,7 @@ The prompt text that gets fed back on each loop iteration.
 - `current_section` — The section identifier currently being implemented.
 - `completion_promise` — The exact string that must appear in output to permit exit.
 - `review_iteration` — Current section review iteration (0 = no review yet). Used by the section review gate.
+- `max_tdd_iterations` — Read from `planning/config.json` (not stored in the state file). Default: 20. When `iteration >= max_tdd_iterations`, the hook allows exit with a `tdd_cap_reached` signal.
 - `started_at` — ISO 8601 timestamp of when the loop was activated.
 - `spec_file` — Path to the original spec file.
 - `planning_dir` — Path to the planning directory.
@@ -51,6 +52,7 @@ The prompt text that gets fed back on each loop iteration.
 5. **SubagentStop hook intercepts** — Read the state file and check the transcript for the completion promise.
 6. **Promise found** — Allow exit. Proceed to section review gate.
 7. **Promise not found** — Block exit. Increment `iteration` and feed back the prompt body.
+7b. **TDD cap reached** — If `iteration >= max_tdd_iterations` (from config.json), allow exit with `tdd_cap_reached` signal. Main session escalates to user: skip section, keep trying (+10), or review errors.
 8. **Section review gate** — Main session reviews changed files inline against the section spec (see `references/section-review-protocol.md`). If issues found, swap `completion_promise` to `SECTION_REVIEW_FIX_COMPLETE`, dispatch fix subagent, re-review. Max `max_section_review_iterations` cycles.
 9. **Successful exit** — Perform an atomic commit and advance to the next section.
 
