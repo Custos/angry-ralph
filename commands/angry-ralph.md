@@ -68,7 +68,9 @@ Confirm git repository:
 git rev-parse --is-inside-work-tree
 ```
 
-If not in a git repo, ask whether to `git init`. Do not initialize without consent.
+If not in a git repo:
+- **`--auto` mode**: Run `git init` automatically. No prompt needed.
+- **Interactive mode**: Ask whether to `git init`. Do not initialize without consent.
 
 ## 3. Backwards Compatibility Migration
 
@@ -90,7 +92,9 @@ Check `.ralph-state/` for prior state:
 - `.ralph-state/pipeline.json` → read `current_phase` and `completed_sections` for finer resume
 - `.ralph-state/loop.md` with `active=true` → mid-section TDD resume
 
-If prior state detected, ask via AskUserQuestion: "Resume the previous run, or start fresh?"
+If prior state detected:
+- **`--auto` mode**: Resume automatically from the last completed phase. No prompt.
+- **Interactive mode**: Ask via AskUserQuestion: "Resume the previous run, or start fresh?"
 
 If start fresh: `rm -rf .ralph-state/ planning/` and continue.
 
