@@ -3,11 +3,27 @@
 # Handles idempotency (.done markers), pipeline.json CRUD, and legacy migration.
 set -euo pipefail
 
+# Ensure .ralph-state/ and .planning/ are in the project's .gitignore.
+# Idempotent: only appends entries that are missing.
+# $1 = project directory
+ensure_gitignore() {
+  local project_dir="$1"
+  local gitignore="$project_dir/.gitignore"
+  local entries=(".ralph-state/" ".planning/")
+
+  for entry in "${entries[@]}"; do
+    if [ ! -f "$gitignore" ] || ! grep -qxF "$entry" "$gitignore"; then
+      echo "$entry" >> "$gitignore"
+    fi
+  done
+}
+
 # Initialize .ralph-state/ directory structure.
 # $1 = project directory
 pipeline_init() {
   local project_dir="$1"
   mkdir -p "$project_dir/.ralph-state/phases"
+  ensure_gitignore "$project_dir"
 }
 
 # Create pipeline.json with initial config.
@@ -187,6 +203,12 @@ migrate_legacy() {
   if [ -f "$project_dir/planning/config.json" ] && [ ! -f "$project_dir/.ralph-state/pipeline.json" ]; then
     mkdir -p "$project_dir/.ralph-state"
     cp "$project_dir/planning/config.json" "$project_dir/.ralph-state/pipeline.json"
+    did_migrate="migrated"
+  fi
+
+  # Migrate planning/ → .planning/ (v0.2.0 → v0.3.0)
+  if [ -d "$project_dir/planning" ] && [ ! -d "$project_dir/.planning" ]; then
+    mv "$project_dir/planning" "$project_dir/.planning"
     did_migrate="migrated"
   fi
 

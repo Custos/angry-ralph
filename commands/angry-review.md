@@ -46,12 +46,12 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh append . completed_phases rev
 ### On-Demand Mode
 
 1. If `.ralph-state/pipeline.json` exists, read `review_tier` and `available_reviewers`. Otherwise run `validate-env.sh`.
-2. Create output directory: `planning/reviews/on-demand/<target>-<timestamp>/`
+2. Create output directory: `.planning/reviews/on-demand/<target>-<timestamp>/`
 
-**For `plan`**: Validate `planning/angry-ralph-plan.md` exists. Spawn `external-reviewer` subagent with the plan file.
+**For `plan`**: Validate `.planning/angry-ralph-plan.md` exists. Spawn `external-reviewer` subagent with the plan file.
 
-**For `code`**: Validate `planning/angry-ralph-plan.md` exists. Spawn `external-reviewer` subagent for code review against plan.
+**For `code`**: Validate `.planning/angry-ralph-plan.md` exists. Spawn `external-reviewer` subagent for code review against plan.
 
-**For `section <name>`**: Resolve `planning/sections/section-<name>.md`. Spawn `external-reviewer` subagent with section spec and changed files.
+**For `section <name>`**: Resolve `.planning/sections/section-<name>.md`. Spawn `external-reviewer` subagent with section spec and changed files.
 
 In all on-demand cases: run triage (CRITICAL/WARNING/INFO), present findings. Do NOT write `.done` markers.

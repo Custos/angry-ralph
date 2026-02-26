@@ -52,7 +52,7 @@ Validate that the spec file exists and is readable. Store the resolved absolute 
 
 Read the input spec file in its entirety. Identify the core problem domain, target tech stack, key features, and constraints. Note all ambiguities, missing details, and implicit assumptions.
 
-Interview the user to resolve ambiguities. Ask clarifying questions one at a time via `AskUserQuestion` -- never batch multiple questions into a single prompt. Continue until all identified ambiguities are resolved. Write the interview transcript to `planning/angry-ralph-interview.md`.
+Interview the user to resolve ambiguities. Ask clarifying questions one at a time via `AskUserQuestion` -- never batch multiple questions into a single prompt. Continue until all identified ambiguities are resolved. Write the interview transcript to `.planning/angry-ralph-interview.md`.
 
 Evaluate whether the spec requires decomposition into multiple planning units. Apply the splitting heuristics: different domains, independently deployable components, different tech stacks, or estimated size exceeding 500 lines of code. If splitting, write a planning unit manifest to the top of the plan file. If not splitting, treat the entire spec as a single unit.
 
@@ -76,7 +76,7 @@ Write a detailed implementation plan for each planning unit. The plan must inclu
 
 Divide the plan into numbered implementation sections. Each section must define its scope, dependencies on prior sections, explicit test specifications, and acceptance criteria. Order sections so foundational components come before dependent ones.
 
-Write the complete plan to `planning/angry-ralph-plan.md`. Write a synthesized specification incorporating all interview answers and resolved ambiguities to `planning/angry-ralph-spec.md`.
+Write the complete plan to `.planning/angry-ralph-plan.md`. Write a synthesized specification incorporating all interview answers and resolved ambiguities to `.planning/angry-ralph-spec.md`.
 
 Run the plan quality checklist before marking Phase 2 complete: verify every component has a section, every section has test specs, section dependencies form a valid DAG, the test runner command is consistent, error handling covers all boundaries, and the synthesized spec reflects all interview answers.
 
@@ -95,7 +95,7 @@ angry-ralph: Review tier — <TIER_LABEL>
 Reviewers: <comma-separated list of active reviewers>
 ```
 
-Read the `review_tier` and `available_reviewers` from `.ralph-state/pipeline.json` to determine which reviewers to use. Spawn the `external-reviewer` subagent, passing the active tier and available reviewers in the prompt. Before each iteration, create the review output directory: `planning/reviews/iteration-N/`.
+Read the `review_tier` and `available_reviewers` from `.ralph-state/pipeline.json` to determine which reviewers to use. Spawn the `external-reviewer` subagent, passing the active tier and available reviewers in the prompt. Before each iteration, create the review output directory: `.planning/reviews/iteration-N/`.
 
 The subagent produces structured markdown with `## Findings` (tagged with source attribution `[Gemini]`, `[Codex]`, or `[Claude-Reflection]` AND severity `[CRITICAL]`, `[WARNING]`, `[INFO]`), `## Questions`, and `## Summary`.
 
@@ -134,19 +134,19 @@ Parse the finalized plan into numbered section markdown specs. Each section spec
 
 ### Output Files
 
-Write each section spec to `planning/sections/` with the naming convention:
+Write each section spec to `.planning/sections/` with the naming convention:
 
 ```
-planning/sections/section-01-name.md
-planning/sections/section-02-name.md
-planning/sections/section-03-name.md
+.planning/sections/section-01-name.md
+.planning/sections/section-02-name.md
+.planning/sections/section-03-name.md
 ```
 
 Use kebab-case for the name portion. Derive section names from the plan's `## Section N: <Name>` headers.
 
 ### Manifest
 
-Write a section manifest to `planning/sections/index.md` listing all sections in execution order with:
+Write a section manifest to `.planning/sections/index.md` listing all sections in execution order with:
 
 - Section number and name
 - Brief scope description (1 sentence)
@@ -205,7 +205,7 @@ Output the completion promise `SECTION_COMPLETE` only when ALL of the following 
 
 If the SubagentStop hook detects that `iteration >= max_tdd_iterations` (from `.ralph-state/pipeline.json`, default 20), it allows exit with a `tdd_cap_reached` signal instead of blocking. The main session then asks the user via `AskUserQuestion`: "Section X failed after N TDD iterations. Review errors, skip section, or keep trying (+10 iterations)?"
 
-- **Skip section**: Mark the section as `failed` in `planning/sections/index.md` and advance to the next section.
+- **Skip section**: Mark the section as `failed` in `.planning/sections/index.md` and advance to the next section.
 - **Keep trying**: Add 10 to `max_tdd_iterations` in `.ralph-state/pipeline.json` and re-dispatch the subagent.
 - **Review errors**: Display the last test output for user inspection before deciding.
 
@@ -238,7 +238,7 @@ After mechanical gates pass and before committing, perform an inline code review
 
 **If CRITICAL or actionable WARNING findings exist:**
 
-1. Write findings to `planning/reviews/sections/<section-name>/review-N.md`.
+1. Write findings to `.planning/reviews/sections/<section-name>/review-N.md`.
 2. Swap `completion_promise` to `SECTION_REVIEW_FIX_COMPLETE` and update `review_iteration` in the state file.
 3. Dispatch a fresh fix subagent with the findings, section spec, and instructions to fix issues and output `SECTION_REVIEW_FIX_COMPLETE` when tests pass.
 4. After the fix subagent exits, re-review. Repeat up to `max_section_review_iterations` times (default: 2, from `.ralph-state/pipeline.json`).
@@ -289,7 +289,7 @@ Phase 6 uses a review-fix-review loop — it does NOT declare completion after a
 
 For each iteration (up to `max_review_iterations`, default 3):
 
-1. Create the review directory: `mkdir -p planning/reviews/final/iteration-N/`
+1. Create the review directory: `mkdir -p .planning/reviews/final/iteration-N/`
 2. Spawn the `external-reviewer` subagent with review type `"final integration review"`.
 3. Provide the subagent with the active review tier, available reviewers, project directory path, plan file path, and sections directory.
 4. The subagent invokes the available reviewers, focusing on integration bugs, security vulnerabilities, plan-vs-code gaps, and missing error handling. All findings tagged with source.
@@ -300,13 +300,13 @@ For each iteration (up to `max_review_iterations`, default 3):
 ### Iteration Cap
 
 When `max_review_iterations` is exhausted with findings still open:
-- Log remaining findings to `planning/reviews/final/unresolved.md`
+- Log remaining findings to `.planning/reviews/final/unresolved.md`
 - Proceed to completion — do NOT block the pipeline
 - The unresolved file serves as a production roadmap
 
 ### Pipeline Completion
 
-Produce a summary report at `planning/reviews/final/review-summary.md`: total iterations, findings per severity, fixes with commits, unresolved items.
+Produce a summary report at `.planning/reviews/final/review-summary.md`: total iterations, findings per severity, fixes with commits, unresolved items.
 
 Deactivate the state file by setting `active=false` or removing it entirely. Update `.ralph-state/pipeline.json`: set `current_phase` to `"complete"` and append `"final_review"` to `completed_phases`. Report full pipeline completion to the user. List every commit made during the session in chronological order.
 

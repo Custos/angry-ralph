@@ -72,7 +72,7 @@ METHODOLOGY:
 4. Check for drift between what existing code/docs claim and what is actually implemented. Read the code, not just the docs.
 5. Read individual scripts and functions the plan depends on. Verify they do what the plan assumes they do.
 
-The implementation plan is at $(pwd)/planning/angry-ralph-plan.md. Read it, then read the files it references.
+The implementation plan is at $(pwd)/.planning/angry-ralph-plan.md. Read it, then read the files it references.
 
 Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --approval-mode plan -o text
 ```
@@ -89,7 +89,7 @@ METHODOLOGY:
 5. Test edge cases by reading code, not docs: empty inputs, missing files, malformed data, permission errors.
 6. Check that referenced file paths, CLI flags, and environment variables actually exist and work as documented.
 
-The plan is at $(pwd)/planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
+The plan is at $(pwd)/.planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
 
 Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --approval-mode plan -o text
 ```
@@ -110,9 +110,9 @@ METHODOLOGY:
 4. Check for drift between what existing code/docs claim and what is actually implemented. Read the code, not just the docs.
 5. Read individual scripts and functions the plan depends on. Verify they do what the plan assumes they do.
 
-The implementation plan is at planning/angry-ralph-plan.md. Read it, then read the files it references.
+The implementation plan is at .planning/angry-ralph-plan.md. Read it, then read the files it references.
 
-Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." -C "$(pwd)" --sandbox read-only -o planning/reviews/iteration-N/codex-review.md
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md
 ```
 
 For final code review:
@@ -127,9 +127,9 @@ METHODOLOGY:
 5. Test edge cases by reading code, not docs: empty inputs, missing files, malformed data, permission errors.
 6. Check that referenced file paths, CLI flags, and environment variables actually exist and work as documented.
 
-The plan is at planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
+The plan is at .planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
 
-Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." -C "$(pwd)" --sandbox read-only -o planning/reviews/final/codex-review.md
+Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." -C "$(pwd)" --sandbox read-only -o .planning/reviews/final/codex-review.md
 ```
 
 - Use `--sandbox read-only` to prevent filesystem writes outside the output file.
@@ -150,7 +150,7 @@ METHODOLOGY:
 
 Be rigorous — you are an independent reviewer, not a validator.
 
-The implementation plan is at $(pwd)/planning/angry-ralph-plan.md. Read it, then read the files it references.
+The implementation plan is at $(pwd)/.planning/angry-ralph-plan.md. Read it, then read the files it references.
 
 Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --output-format text
 ```
@@ -169,7 +169,7 @@ METHODOLOGY:
 
 Be rigorous — you are an independent reviewer, not a validator.
 
-The plan is at $(pwd)/planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
+The plan is at $(pwd)/.planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
 
 Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --output-format text
 ```
@@ -183,10 +183,10 @@ When running both reviewers, use background jobs:
 
 ```bash
 # Launch both in parallel
-gemini -p "<prompt>" --approval-mode plan -o text > planning/reviews/iteration-N/gemini-review.md 2>&1 &
+gemini -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1 &
 GEMINI_PID=$!
 
-codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o planning/reviews/iteration-N/codex-review.md &
+codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md &
 CODEX_PID=$!
 
 # Wait and capture exit codes
@@ -195,17 +195,17 @@ wait $CODEX_PID; CODEX_EXIT=$?
 
 # Retry on failure
 if [ $GEMINI_EXIT -ne 0 ]; then
-  gemini -p "<prompt>" --approval-mode plan -o text > planning/reviews/iteration-N/gemini-review.md 2>&1
+  gemini -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1
   GEMINI_EXIT=$?
 fi
 if [ $CODEX_EXIT -ne 0 ]; then
-  codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o planning/reviews/iteration-N/codex-review.md
+  codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md
   CODEX_EXIT=$?
 fi
 
 # Fallback if both failed
 if [ $GEMINI_EXIT -ne 0 ] && [ $CODEX_EXIT -ne 0 ]; then
-  claude -p "<prompt>" --output-format text > planning/reviews/iteration-N/claude-review.md 2>&1
+  claude -p "<prompt>" --output-format text > .planning/reviews/iteration-N/claude-review.md 2>&1
 fi
 ```
 

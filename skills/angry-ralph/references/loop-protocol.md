@@ -21,7 +21,7 @@ completion_promise: SECTION_COMPLETE
 review_iteration: 0
 started_at: "2026-02-25T12:00:00Z"
 spec_file: path/to/spec.md
-planning_dir: path/to/planning/
+planning_dir: path/to/.planning/
 ---
 
 The prompt text that gets fed back on each loop iteration.
@@ -62,7 +62,7 @@ The prompt text that gets fed back on each loop iteration.
 
 To start the loop for a given section:
 
-1. Read the section spec from `planning/sections/section-NN-name.md`.
+1. Read the section spec from `.planning/sections/section-NN-name.md`.
 2. Construct the prompt body from the section spec content combined with TDD instructions.
 3. Create or update the state file with:
    - `phase=execute`

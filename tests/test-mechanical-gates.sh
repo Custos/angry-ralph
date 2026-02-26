@@ -100,8 +100,8 @@ git checkout -q -- .
 rm -rf tests src/stub.py src/incomplete.py
 
 # Create a section spec with data contracts
-mkdir -p planning/sections
-cat > planning/sections/section-01-auth.md << 'SPECEOF'
+mkdir -p .planning/sections
+cat > .planning/sections/section-01-auth.md << 'SPECEOF'
 ## Test Data Contracts
 
 test_login_success:
@@ -130,7 +130,7 @@ def test_login_rejects_bad_pw():
 TESTEOF
 
 EXIT=0
-OUTPUT=$(bash "$GATES" spec_compliance "planning/sections/section-01-auth.md" "$TEST_DIR" 2>&1) || EXIT=$?
+OUTPUT=$(bash "$GATES" spec_compliance ".planning/sections/section-01-auth.md" "$TEST_DIR" 2>&1) || EXIT=$?
 assert_eq "spec_compliance passes when all tests exist" "0" "$EXIT"
 
 # ---- Test 7: spec_compliance fails when a contract test is missing ----
@@ -141,14 +141,14 @@ def test_login_success():
 TESTEOF
 
 EXIT=0
-OUTPUT=$(bash "$GATES" spec_compliance "planning/sections/section-01-auth.md" "$TEST_DIR" 2>&1) || EXIT=$?
+OUTPUT=$(bash "$GATES" spec_compliance ".planning/sections/section-01-auth.md" "$TEST_DIR" 2>&1) || EXIT=$?
 assert_eq "spec_compliance fails on missing test" "1" "$EXIT"
 assert_contains "spec_compliance reports missing test" "test_login_rejects_bad_pw" "$OUTPUT"
 
 # ---- Test 8: spec_compliance passes with no contracts in spec ----
-echo "# Just a description, no contracts" > planning/sections/section-02-empty.md
+echo "# Just a description, no contracts" > .planning/sections/section-02-empty.md
 EXIT=0
-OUTPUT=$(bash "$GATES" spec_compliance "planning/sections/section-02-empty.md" "$TEST_DIR" 2>&1) || EXIT=$?
+OUTPUT=$(bash "$GATES" spec_compliance ".planning/sections/section-02-empty.md" "$TEST_DIR" 2>&1) || EXIT=$?
 assert_eq "spec_compliance passes with no contracts" "0" "$EXIT"
 
 # ---- Test 9: test_verify fails on non-zero exit ----

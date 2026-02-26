@@ -17,7 +17,7 @@ Reference protocol for Phase 1 (DECOMPOSE) and Phase 2 (PLAN) of the angry-ralph
 4. Ask clarifying questions **one at a time** via `AskUserQuestion`. Do not batch multiple questions into a single prompt.
 5. Focus each question on a single topic: a missing requirement, an ambiguous constraint, or a design decision that affects architecture.
 6. Continue asking until all ambiguities identified in step 3 are resolved.
-7. Write the full interview transcript (questions and answers) to `planning/angry-ralph-interview.md`.
+7. Write the full interview transcript (questions and answers) to `.planning/angry-ralph-interview.md`.
 
 ### Determine Decomposition
 
@@ -34,7 +34,7 @@ Reference protocol for Phase 1 (DECOMPOSE) and Phase 2 (PLAN) of the angry-ralph
    - Dependencies on other units (by name)
    - Dependency ordering (units with no dependencies first)
 
-   Write the manifest to the top of `planning/angry-ralph-plan.md` under a `## Planning Units` header.
+   Write the manifest to the top of `.planning/angry-ralph-plan.md` under a `## Planning Units` header.
 
 10. **If not splitting**: treat the entire spec as a single planning unit named after the project. Skip the manifest and proceed directly to Phase 2.
 
@@ -125,8 +125,8 @@ For each planning unit (or the single unit if no split), produce a detailed impl
 
 ### Write Output Files
 
-19. Write the complete plan to `planning/angry-ralph-plan.md`.
-20. Write a synthesized specification (incorporating all interview answers and resolved ambiguities) to `planning/angry-ralph-spec.md`. The synthesized spec serves as the single source of truth for all subsequent phases.
+19. Write the complete plan to `.planning/angry-ralph-plan.md`.
+20. Write a synthesized specification (incorporating all interview answers and resolved ambiguities) to `.planning/angry-ralph-spec.md`. The synthesized spec serves as the single source of truth for all subsequent phases.
 
 ### Plan Quality Checklist
 

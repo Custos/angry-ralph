@@ -66,7 +66,7 @@ assert_empty "no state file → empty stdout (allow)" "$OUTPUT"
 
 # ---- Test 2: State file with phase=execute, no promise → blocks (JSON stdout) ----
 mkdir -p "$TEST_DIR/.ralph-state"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT="$TEST_DIR/transcript.jsonl"
 echo '{"role":"assistant","content":"I am working on it"}' > "$TRANSCRIPT"
@@ -88,20 +88,20 @@ assert_eq "iteration incremented to 2" "2" "$ITER"
 
 # ---- Test 3: State file with phase=plan → allow (empty stdout) ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "plan" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Plan the auth module"
+create_state_file "$STATE_FILE" "plan" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Plan the auth module"
 OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"","cwd":"'"$TEST_DIR"'"}')
 assert_empty "phase=plan → empty stdout (allow)" "$OUTPUT"
 
 # ---- Test 4: State file with active=false → allow (empty stdout) ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 write_state_field "$STATE_FILE" "active" "false"
 OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"","cwd":"'"$TEST_DIR"'"}')
 assert_empty "active=false → empty stdout (allow)" "$OUTPUT"
 
 # ---- Test 5: Promise found in transcript → allow (empty stdout) ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT2="$TEST_DIR/transcript2.jsonl"
 echo '{"role":"user","content":"please build it"}' > "$TRANSCRIPT2"
@@ -112,7 +112,7 @@ assert_empty "promise found → empty stdout (allow)" "$OUTPUT"
 
 # ---- Test 6: Corrupt transcript → fail-closed (block with error payload) ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT3="$TEST_DIR/transcript3.jsonl"
 echo 'THIS IS NOT VALID JSON' > "$TRANSCRIPT3"
@@ -124,7 +124,7 @@ assert_contains "corrupt transcript → mentions error" "TOOLING ERROR" "$OUTPUT
 
 # ---- Test 7: Swapped promise (SECTION_REVIEW_FIX_COMPLETE) gates correctly ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_REVIEW_FIX_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Fix review findings"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_REVIEW_FIX_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Fix review findings"
 
 TRANSCRIPT4="$TEST_DIR/transcript4.jsonl"
 echo '{"role":"user","content":"fix the issues"}' > "$TRANSCRIPT4"
@@ -135,7 +135,7 @@ assert_empty "swapped promise found → empty stdout (allow)" "$OUTPUT"
 
 # ---- Test 7b: Swapped promise — wrong promise in transcript → block ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_REVIEW_FIX_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Fix review findings"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_REVIEW_FIX_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Fix review findings"
 
 TRANSCRIPT5="$TEST_DIR/transcript5.jsonl"
 echo '{"role":"assistant","content":"Done! SECTION_COMPLETE"}' > "$TRANSCRIPT5"
@@ -147,7 +147,7 @@ assert_contains "wrong promise for swapped state → block value" '"block"' "$OU
 # ---- Test 8: TDD cap reached → allow exit (no promise needed) ----
 rm -f "$STATE_FILE"
 mkdir -p "$TEST_DIR/.ralph-state"
-create_state_file "$STATE_FILE" "execute" "20" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "20" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 # Create pipeline.json with max_tdd_iterations=20
 echo '{"max_tdd_iterations": 20}' > "$TEST_DIR/.ralph-state/pipeline.json"
@@ -162,7 +162,7 @@ assert_contains "tdd cap reached → has tdd_cap_reached" "tdd_cap_reached" "$OU
 
 # ---- Test 9: Empty promise → block (never bypass loop) ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT_EMPTY="$TEST_DIR/transcript_empty.jsonl"
 echo '{"role":"assistant","content":"All done!"}' > "$TRANSCRIPT_EMPTY"
@@ -174,7 +174,7 @@ assert_contains "empty promise → mentions safety" "SAFETY BLOCK" "$OUTPUT"
 
 # ---- Test 10: Nested JSON transcript (real Claude format) → promise found ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT_NESTED="$TEST_DIR/transcript_nested.jsonl"
 echo '{"type":"message","message":{"role":"user","content":[{"type":"text","text":"build it"}]}}' > "$TRANSCRIPT_NESTED"
@@ -185,7 +185,7 @@ assert_empty "nested JSON transcript → promise found (allow)" "$OUTPUT"
 
 # ---- Test 11: Nested JSON transcript — promise NOT found → blocks ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT_NESTED2="$TEST_DIR/transcript_nested2.jsonl"
 echo '{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Still working on it"}]}}' > "$TRANSCRIPT_NESTED2"
@@ -195,7 +195,7 @@ assert_contains "nested JSON no promise → block" '"block"' "$OUTPUT"
 
 # ---- Test 12: SubagentStop — non-TDD subagent (promise not in transcript) → allow ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT_REVIEW="$TEST_DIR/transcript_review.jsonl"
 echo '{"role":"user","content":"Review the code for security issues"}' > "$TRANSCRIPT_REVIEW"
@@ -206,7 +206,7 @@ assert_empty "SubagentStop non-TDD subagent → allow exit" "$OUTPUT"
 
 # ---- Test 13: SubagentStop — TDD subagent (promise in prompt but not last msg) → block ----
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 TRANSCRIPT_TDD="$TEST_DIR/transcript_tdd.jsonl"
 echo '{"role":"user","content":"Build section-01-auth. Output SECTION_COMPLETE when tests pass."}' > "$TRANSCRIPT_TDD"

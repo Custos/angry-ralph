@@ -28,6 +28,16 @@ assert_eq() {
 bash "$PIPELINE" init "$TEST_DIR"
 assert_eq ".ralph-state/ created" "true" "$([ -d "$TEST_DIR/.ralph-state/phases" ] && echo true || echo false)"
 
+# ---- Test 1b: pipeline_init ensures .gitignore entries ----
+assert_eq ".gitignore exists" "true" "$([ -f "$TEST_DIR/.gitignore" ] && echo true || echo false)"
+assert_eq ".gitignore has .ralph-state/" "true" "$(grep -qxF '.ralph-state/' "$TEST_DIR/.gitignore" && echo true || echo false)"
+assert_eq ".gitignore has .planning/" "true" "$(grep -qxF '.planning/' "$TEST_DIR/.gitignore" && echo true || echo false)"
+
+# ---- Test 1c: ensure_gitignore is idempotent ----
+bash "$PIPELINE" init "$TEST_DIR"
+COUNT=$(grep -cxF '.ralph-state/' "$TEST_DIR/.gitignore")
+assert_eq ".gitignore no duplicate .ralph-state/" "1" "$COUNT"
+
 # ---- Test 2: pipeline_create writes valid JSON ----
 bash "$PIPELINE" create "$TEST_DIR" "/tmp/spec.md" "interactive" "3" "2" "20" "adversarial" "gemini,codex"
 assert_eq "pipeline.json exists" "true" "$([ -f "$TEST_DIR/.ralph-state/pipeline.json" ] && echo true || echo false)"
@@ -133,7 +143,29 @@ CAP=$(bash "$PIPELINE" read "$AUTO_DIR" "max_review_iterations")
 assert_eq "custom max_review" "5" "$CAP"
 rm -rf "$AUTO_DIR"
 
-# ---- Test 13: pipeline_read on missing file returns empty ----
+# ---- Test 13: migrate planning/ → .planning/ ----
+PLAN_MIG_DIR=$(mktemp -d)
+mkdir -p "$PLAN_MIG_DIR/planning/sections"
+echo "plan content" > "$PLAN_MIG_DIR/planning/angry-ralph-plan.md"
+echo "section" > "$PLAN_MIG_DIR/planning/sections/section-01.md"
+mkdir -p "$PLAN_MIG_DIR/.ralph-state"
+RESULT=$(bash "$PIPELINE" migrate "$PLAN_MIG_DIR")
+assert_eq "migrate planning/ returns migrated" "migrated" "$RESULT"
+assert_eq ".planning/ exists after migrate" "true" "$([ -d "$PLAN_MIG_DIR/.planning" ] && echo true || echo false)"
+assert_eq "planning/ removed after migrate" "false" "$([ -d "$PLAN_MIG_DIR/planning" ] && echo true || echo false)"
+assert_eq ".planning/sections preserved" "true" "$([ -f "$PLAN_MIG_DIR/.planning/sections/section-01.md" ] && echo true || echo false)"
+rm -rf "$PLAN_MIG_DIR"
+
+# ---- Test 13b: migrate planning/ is idempotent when .planning/ exists ----
+PLAN_BOTH_DIR=$(mktemp -d)
+mkdir -p "$PLAN_BOTH_DIR/planning"
+mkdir -p "$PLAN_BOTH_DIR/.planning"
+mkdir -p "$PLAN_BOTH_DIR/.ralph-state"
+RESULT=$(bash "$PIPELINE" migrate "$PLAN_BOTH_DIR")
+assert_eq "migrate skips when .planning/ exists" "none" "$RESULT"
+rm -rf "$PLAN_BOTH_DIR"
+
+# ---- Test 14: pipeline_read on missing file returns empty ----
 EMPTY=$(bash "$PIPELINE" read "/nonexistent" "mode")
 assert_eq "read on missing returns empty" "" "$EMPTY"
 

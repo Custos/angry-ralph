@@ -149,7 +149,7 @@ All commands are thin wrappers that delegate to `scripts/lib/pipeline.sh` and `s
 
 ### Key Components
 
-**External Reviewer Agent** - A sandboxed subagent restricted to `Bash` and `Read` tools only. It invokes `gemini` and `codex` via CLI subprocesses, passing file paths (never stdin). The CLIs read spec/plan/code files from disk and write review output to the `planning/reviews/` directory.
+**External Reviewer Agent** - A sandboxed subagent restricted to `Bash` and `Read` tools only. It invokes `gemini` and `codex` via CLI subprocesses, passing file paths (never stdin). The CLIs read spec/plan/code files from disk and write review output to the `.planning/reviews/` directory.
 
 **Ralph Loop (Stop + SubagentStop Hooks)** - During the EXECUTE phase, both the Stop and SubagentStop hooks intercept exit attempts. Each section is dispatched to a fresh subagent with clean context, and the SubagentStop hook gates its completion. The hook checks a state file (`.ralph-state/loop.md`) and the session transcript for a completion promise (`SECTION_COMPLETE`). If the promise isn't found in the last assistant message, the hook blocks exit and feeds the section prompt back, forcing the loop to continue until tests pass. The hook is fail-open before confirming an active execute-phase loop (safe default), and fail-closed once gating a confirmed TDD loop. The main session stays lean, managing only coordination and section transitions.
 
@@ -206,7 +206,7 @@ for t in tests/test-*.sh; do echo "=== $t ==="; bash "$t"; echo; done
 
 ## Planning Artifacts
 
-When angry-ralph runs, it creates a `.ralph-state/` directory for pipeline state and a `planning/` directory for artifacts:
+When angry-ralph runs, it creates two hidden, gitignored directories for runtime state and artifacts:
 
 ```
 .ralph-state/
@@ -216,7 +216,7 @@ When angry-ralph runs, it creates a `.ralph-state/` directory for pipeline state
 ├── review.done                 # Phase completion marker
 └── execute.done                # Phase completion marker
 
-planning/
+.planning/
 ├── angry-ralph-plan.md         # The implementation plan
 ├── angry-ralph-interview.md    # Decomposition interview notes
 ├── reviews/

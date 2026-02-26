@@ -79,8 +79,8 @@ Run `git diff --name-only HEAD` to list all files changed since the last commit.
 
 Read the following:
 - Each changed file (full content)
-- The current section spec from `planning/sections/section-NN-name.md`
-- The implementation plan from `planning/angry-ralph-plan.md` (the relevant section)
+- The current section spec from `.planning/sections/section-NN-name.md`
+- The implementation plan from `.planning/angry-ralph-plan.md` (the relevant section)
 
 ### 3. Evaluate the Review Checklist
 
@@ -143,7 +143,7 @@ If the review finds zero CRITICAL and zero WARNING findings, proceed directly to
 
 When CRITICAL or actionable WARNING findings are identified:
 
-1. **Log the review** — Write findings to `planning/reviews/sections/<section-name>/review-N.md` where N is the current `review_iteration` + 1.
+1. **Log the review** — Write findings to `.planning/reviews/sections/<section-name>/review-N.md` where N is the current `review_iteration` + 1.
 
 2. **Swap the completion promise** — Update the state file:
    ```
@@ -173,7 +173,7 @@ When CRITICAL or actionable WARNING findings are identified:
 The review-fix cycle runs a maximum of `max_section_review_iterations` times (default: 2, configurable via `--max-section-review-iterations`). Read this value from `.ralph-state/pipeline.json`.
 
 When the cap is reached with findings still open:
-- Log all remaining findings to `planning/reviews/sections/<section-name>/review-N.md`
+- Log all remaining findings to `.planning/reviews/sections/<section-name>/review-N.md`
 - Restore `completion_promise` to `SECTION_COMPLETE`
 - Proceed to the atomic commit
 - Do NOT prompt the user — log and move on
@@ -185,8 +185,8 @@ When the cap is reached with findings still open:
 Store review outputs at:
 
 ```
-planning/reviews/sections/<section-name>/review-1.md
-planning/reviews/sections/<section-name>/review-2.md
+.planning/reviews/sections/<section-name>/review-1.md
+.planning/reviews/sections/<section-name>/review-2.md
 ```
 
 Each review file should contain:

@@ -14,14 +14,14 @@ Initiate the final review only after ALL of the following conditions are met:
 
 ## How to Execute
 
-1. Create the final review output directory: `mkdir -p planning/reviews/final/`
+1. Create the final review output directory: `mkdir -p .planning/reviews/final/`
 2. Spawn the `external-reviewer` subagent via the Task tool.
 3. Provide the subagent with the following inputs:
    - Review type: `"final integration review"`
    - Active review tier and available reviewers (from `.ralph-state/pipeline.json`)
    - Project directory path (absolute)
-   - Plan file path: `planning/angry-ralph-plan.md`
-   - Sections directory: `planning/sections/`
+   - Plan file path: `.planning/angry-ralph-plan.md`
+   - Sections directory: `.planning/sections/`
 4. The subagent invokes the available reviewers based on the active tier:
    - **Adversarial tier**: gemini + codex CLIs
    - **Partial tier**: available external CLI + claude fallback
@@ -63,7 +63,7 @@ iteration = 0
 max_iterations = max_review_iterations from .ralph-state/pipeline.json (default 3)
 
 while iteration < max_iterations:
-    create review directory: planning/reviews/final/iteration-{iteration + 1}/
+    create review directory: .planning/reviews/final/iteration-{iteration + 1}/
     spawn external-reviewer subagent
     receive review payload
     triage all findings per the decision tree below
@@ -75,7 +75,7 @@ while iteration < max_iterations:
     iteration += 1
 
 if iteration == max_iterations AND findings remain:
-    log remaining findings to planning/reviews/final/unresolved.md
+    log remaining findings to .planning/reviews/final/unresolved.md
     proceed to completion (do NOT prompt the user)
 ```
 
@@ -108,13 +108,13 @@ Each re-review iteration spawns a fresh external-reviewer subagent. The reviewer
 ### Iteration Cap
 
 When `max_review_iterations` is exhausted with findings still open:
-- Write all remaining findings to `planning/reviews/final/unresolved.md`
+- Write all remaining findings to `.planning/reviews/final/unresolved.md`
 - Proceed to pipeline completion — do NOT prompt the user or block
 - The unresolved findings file serves as a production roadmap
 
 ## Summary Report
 
-After the loop exits (clean or capped), produce a summary report at `planning/reviews/final/review-summary.md`:
+After the loop exits (clean or capped), produce a summary report at `.planning/reviews/final/review-summary.md`:
 
 - Total iterations run
 - Total findings per severity, grouped by source

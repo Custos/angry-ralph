@@ -37,14 +37,14 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh migrate .
 ## 4. Resume Detection
 
 Check `.ralph-state/phases/architect.done`:
-- If exists → "Phases 1-2 already complete. Plan at planning/angry-ralph-plan.md." Stop.
+- If exists → "Phases 1-2 already complete. Plan at .planning/angry-ralph-plan.md." Stop.
 - If `.ralph-state/pipeline.json` exists with `current_phase` beyond `plan` → offer resume.
 
 ## 5. Setup
 
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh create . "<SPEC_FILE>" "<MODE>" "<MAX_REVIEW>" "<MAX_SECTION_REVIEW>" "<MAX_TDD>" "<REVIEW_TIER>" "<AVAILABLE_REVIEWERS>"
-mkdir -p planning/reviews planning/sections
+mkdir -p .planning/reviews .planning/sections
 ```
 
 Set `<MODE>` to `auto` if `--auto` passed, otherwise `interactive`.

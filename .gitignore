@@ -24,5 +24,6 @@ __pycache__/
 *.bak
 
 # angry-ralph runtime artifacts (generated per-project, not part of the plugin)
-planning/
+.ralph-state/
+.planning/
 .claude/angry-ralph.local.md

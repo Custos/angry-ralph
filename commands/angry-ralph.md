@@ -45,7 +45,7 @@ Options:
   --max-tdd-iterations N              Max TDD loop iterations per section (default: 20).
 
 State: .ralph-state/ (gitignored)
-Artifacts: planning/ (persistent)
+Artifacts: .planning/ (hidden, gitignored)
 ```
 
 If no `@file.md` argument is provided and `--help` is not passed, report the error and display the same help text.
@@ -96,7 +96,7 @@ If prior state detected:
 - **`--auto` mode**: Resume automatically from the last completed phase. No prompt.
 - **Interactive mode**: Ask via AskUserQuestion: "Resume the previous run, or start fresh?"
 
-If start fresh: `rm -rf .ralph-state/ planning/` and continue.
+If start fresh: `rm -rf .ralph-state/ .planning/` and continue.
 
 ## 5. Setup
 
@@ -111,7 +111,7 @@ Where `<MODE>` is `auto` if `--auto` was passed, otherwise `interactive`. Substi
 Create planning directories:
 
 ```bash
-mkdir -p planning/reviews planning/sections
+mkdir -p .planning/reviews .planning/sections
 ```
 
 ## 6. Handoff to Skill

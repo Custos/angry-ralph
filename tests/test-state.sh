@@ -30,7 +30,7 @@ source "$STATE_LIB"
 
 # Test 1: create_state_file creates the file with correct frontmatter
 mkdir -p "$TEST_DIR/.ralph-state"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "Build the auth module"
 
 assert_eq "state file exists" "true" "$([ -f "$STATE_FILE" ] && echo true || echo false)"
 assert_eq "active field" "true" "$(read_state_field "$STATE_FILE" "active")"
@@ -68,7 +68,7 @@ assert_eq "prompt body" "Build the auth module" "$BODY"
 
 # Test 4: write_state_field does NOT corrupt prompt body containing field-like text
 rm -f "$STATE_FILE"
-create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "phase: this line looks like a field but is in the body"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/.planning/" "phase: this line looks like a field but is in the body"
 write_state_field "$STATE_FILE" "phase" "review"
 assert_eq "frontmatter phase updated" "review" "$(read_state_field "$STATE_FILE" "phase")"
 BODY_AFTER=$(read_state_body "$STATE_FILE")

@@ -52,7 +52,7 @@ gemini -p "<review prompt referencing file paths>" --approval-mode plan -o text
 
 - Use `--approval-mode plan` to enforce read-only operation.
 - Use `-o text` to capture plain text output.
-- Reference the plan file by absolute path: `$(pwd)/planning/angry-ralph-plan.md`.
+- Reference the plan file by absolute path: `$(pwd)/.planning/angry-ralph-plan.md`.
 
 #### Codex Invocation (when available)
 
@@ -62,7 +62,7 @@ codex exec "<review prompt referencing file paths>" -C "$(pwd)" --sandbox read-o
 
 - Use `--sandbox read-only` to prevent any filesystem writes outside the output file.
 - Use `-C "$(pwd)"` to set the working directory.
-- Write output to `planning/reviews/iteration-N/codex-review.md`.
+- Write output to `.planning/reviews/iteration-N/codex-review.md`.
 
 #### Claude Fallback Invocation (when used)
 
@@ -72,7 +72,7 @@ claude -p "<review prompt referencing file paths>" --output-format text
 
 - Use `--output-format text` to get plain text output.
 - The prompt must explicitly state "separate session" and "no prior context" to maximize independence.
-- Write output to `planning/reviews/iteration-N/claude-review.md`.
+- Write output to `.planning/reviews/iteration-N/claude-review.md`.
 
 ## Parallel Execution and Fallback
 
@@ -116,18 +116,18 @@ Overall assessment of the plan's quality and readiness.
 Before spawning the subagent, create the review directory for the current iteration:
 
 ```
-mkdir -p planning/reviews/iteration-N/
+mkdir -p .planning/reviews/iteration-N/
 ```
 
 Store review outputs at:
-- `planning/reviews/iteration-N/gemini-review.md` -- Gemini output (when available).
-- `planning/reviews/iteration-N/codex-review.md` -- Codex output (when available).
-- `planning/reviews/iteration-N/claude-review.md` -- Claude fallback output (when used).
+- `.planning/reviews/iteration-N/gemini-review.md` -- Gemini output (when available).
+- `.planning/reviews/iteration-N/codex-review.md` -- Codex output (when available).
+- `.planning/reviews/iteration-N/claude-review.md` -- Claude fallback output (when used).
 
 For the final review (Phase 6), store in:
-- `planning/reviews/final/gemini-review.md`
-- `planning/reviews/final/codex-review.md`
-- `planning/reviews/final/claude-review.md`
+- `.planning/reviews/final/gemini-review.md`
+- `.planning/reviews/final/codex-review.md`
+- `.planning/reviews/final/claude-review.md`
 
 ## Triage Decision Tree
 
@@ -162,7 +162,7 @@ iteration = 0
 max_iterations = configured value (default 3)
 
 while iteration < max_iterations:
-    create review directory: planning/reviews/iteration-{iteration + 1}/
+    create review directory: .planning/reviews/iteration-{iteration + 1}/
     spawn external-reviewer subagent
     receive review payload
     triage all findings and questions per the decision tree above

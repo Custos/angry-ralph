@@ -53,7 +53,7 @@ Follow the angry-ralph skill's Phase 4 (SPLIT) instructions.
 
 ## 4. Phase 5: EXECUTE (Ralph Loop + TDD)
 
-For each section in `planning/sections/index.md`:
+For each section in `.planning/sections/index.md`:
 
 Read completed sections:
 
