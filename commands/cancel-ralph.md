@@ -19,12 +19,12 @@ Cancel the active angry-ralph loop by removing the state file.
    - Read state via the Bash tool:
 
    ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/state.sh read .ralph-state/loop.md iteration
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/state.sh read .ralph-state/loop.md phase
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/state.sh read .ralph-state/loop.md current_section
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/state.sh read ".ralph-state/loop.md" "iteration"
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/state.sh read ".ralph-state/loop.md" "phase"
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/state.sh read ".ralph-state/loop.md" "current_section"
    ```
 
-   - Remove the state file: `rm .ralph-state/loop.md`
+   - Remove the state file: `rm -f .ralph-state/loop.md`
    - Report: "Cancelled angry-ralph loop at iteration N (phase: X, section: Y)"
 
 ## Notes

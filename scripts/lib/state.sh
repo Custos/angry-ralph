@@ -76,3 +76,20 @@ remove_state_file() {
   local file="$1"
   rm -f "$file"
 }
+
+# Dispatch: call the function named by $1, pass remaining args.
+# Allows state.sh to be used as a CLI: bash state.sh read <file> <field>
+CMD="${1:-}"
+shift || true
+case "$CMD" in
+  read)           read_state_field "$@" ;;
+  write)          write_state_field "$@" ;;
+  read_body)      read_state_body "$@" ;;
+  create)         create_state_file "$@" ;;
+  remove)         remove_state_file "$@" ;;
+  "")             ;; # sourced with no args — just define functions
+  *)
+    echo "Usage: state.sh <read|write|read_body|create|remove> [args...]" >&2
+    exit 1
+    ;;
+esac

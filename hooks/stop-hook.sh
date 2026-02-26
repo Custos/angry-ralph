@@ -21,10 +21,11 @@ source "$STATE_SH"
 # Read hook input JSON from stdin
 INPUT=$(cat) || INPUT=""
 
-# Parse CWD and transcript path. If JSON parsing fails, allow exit —
+# Parse CWD, transcript path, and event name. If JSON parsing fails, allow exit —
 # no active loop can be gated without valid hook input.
 CWD=$(echo "$INPUT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('cwd',''))" 2>/dev/null) || { exit 0; }
 TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('transcript_path',''))" 2>/dev/null) || { exit 0; }
+HOOK_EVENT=$(echo "$INPUT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('hook_event_name',''))" 2>/dev/null) || HOOK_EVENT=""
 
 # Determine project dir (CLAUDE_PROJECT_DIR override for testing, else CWD)
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$CWD}"
@@ -65,15 +66,49 @@ if [ "$PHASE" != "execute" ]; then
   exit 0
 fi
 
+# 4b. Empty promise guard — if promise is blank/null, block (never bypass loop)
+if [ -z "$COMPLETION_PROMISE" ]; then
+  python3 -c "
+import json
+print(json.dumps({
+    'decision': 'block',
+    'reason': 'No completion promise defined. State file may be corrupt.',
+    'systemMessage': 'angry-ralph: SAFETY BLOCK. completion_promise is empty in .ralph-state/loop.md. A blank promise would bypass the TDD gate. Fix the state file or run /cancel-ralph.'
+}))
+"
+  exit 0
+fi
+
 # 5. Phase IS "execute": check if completion promise appears in transcript
 # Uses python3 to parse JSONL backwards (no tac dependency).
+# Handles both flat format (role/content at top level) and nested format
+# (message.role/message.content) used by real Claude transcripts.
 # Fail-closed: if parsing fails for any reason, we block exit with an error payload.
 PROMISE_FOUND="false"
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
   PROMISE_RESULT=$(python3 -c "
 import json, sys
+
 promise = sys.argv[1]
 transcript = sys.argv[2]
+
+def extract_role_content(entry):
+    # Flat format: {\"role\": \"assistant\", \"content\": \"...\"}
+    role = entry.get('role', '')
+    content = entry.get('content', '')
+    # Nested format: {\"type\": \"message\", \"message\": {\"role\": \"assistant\", \"content\": [...]}}
+    if not role and 'message' in entry:
+        msg = entry['message']
+        if isinstance(msg, dict):
+            role = msg.get('role', '')
+            content = msg.get('content', '')
+    # Normalize content: list of blocks → joined text
+    if isinstance(content, list):
+        content = ' '.join(
+            c.get('text', '') for c in content if isinstance(c, dict)
+        )
+    return role, str(content)
+
 try:
     lines = open(transcript).readlines()
     for line in reversed(lines):
@@ -81,12 +116,9 @@ try:
         if not line:
             continue
         entry = json.loads(line)
-        role = entry.get('role', entry.get('type', ''))
+        role, content = extract_role_content(entry)
         if role == 'assistant':
-            content = entry.get('content', '')
-            if isinstance(content, list):
-                content = ' '.join(c.get('text', '') for c in content if isinstance(c, dict))
-            if promise in str(content):
+            if promise in content:
                 print('found')
             else:
                 print('not_found')
@@ -118,6 +150,25 @@ fi
 # 6. If promise found → allow exit
 if [ "$PROMISE_FOUND" = "true" ]; then
   exit 0
+fi
+
+# 6a. SubagentStop scope guard — if this is a SubagentStop event and the promise
+# doesn't appear ANYWHERE in the transcript, this subagent was never told about the
+# promise (e.g., review subagent, external reviewer). Allow exit — not a TDD subagent.
+if [ "$HOOK_EVENT" = "SubagentStop" ] && [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+  PROMISE_IN_TRANSCRIPT=$(python3 -c "
+import sys
+promise = sys.argv[1]
+try:
+    text = open(sys.argv[2]).read()
+    print('yes' if promise in text else 'no')
+except:
+    print('no')
+" "$COMPLETION_PROMISE" "$TRANSCRIPT_PATH" 2>/dev/null) || PROMISE_IN_TRANSCRIPT="no"
+  if [ "$PROMISE_IN_TRANSCRIPT" = "no" ]; then
+    # This subagent was never instructed to output the promise → not a TDD subagent
+    exit 0
+  fi
 fi
 
 # 6b. Check TDD iteration cap — if iteration >= cap, allow exit with cap_reached signal

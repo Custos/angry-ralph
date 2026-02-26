@@ -160,6 +160,61 @@ assert_contains "tdd cap reached → allow with cap_reached" '"decision"' "$OUTP
 assert_contains "tdd cap reached → decision is allow" '"allow"' "$OUTPUT"
 assert_contains "tdd cap reached → has tdd_cap_reached" "tdd_cap_reached" "$OUTPUT"
 
+# ---- Test 9: Empty promise → block (never bypass loop) ----
+rm -f "$STATE_FILE"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+
+TRANSCRIPT_EMPTY="$TEST_DIR/transcript_empty.jsonl"
+echo '{"role":"assistant","content":"All done!"}' > "$TRANSCRIPT_EMPTY"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"'"$TRANSCRIPT_EMPTY"'","cwd":"'"$TEST_DIR"'"}')
+assert_contains "empty promise → block decision" '"decision"' "$OUTPUT"
+assert_contains "empty promise → block value" '"block"' "$OUTPUT"
+assert_contains "empty promise → mentions safety" "SAFETY BLOCK" "$OUTPUT"
+
+# ---- Test 10: Nested JSON transcript (real Claude format) → promise found ----
+rm -f "$STATE_FILE"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+
+TRANSCRIPT_NESTED="$TEST_DIR/transcript_nested.jsonl"
+echo '{"type":"message","message":{"role":"user","content":[{"type":"text","text":"build it"}]}}' > "$TRANSCRIPT_NESTED"
+echo '{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Done! SECTION_COMPLETE"}]}}' >> "$TRANSCRIPT_NESTED"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"'"$TRANSCRIPT_NESTED"'","cwd":"'"$TEST_DIR"'"}')
+assert_empty "nested JSON transcript → promise found (allow)" "$OUTPUT"
+
+# ---- Test 11: Nested JSON transcript — promise NOT found → blocks ----
+rm -f "$STATE_FILE"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+
+TRANSCRIPT_NESTED2="$TEST_DIR/transcript_nested2.jsonl"
+echo '{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Still working on it"}]}}' > "$TRANSCRIPT_NESTED2"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"'"$TRANSCRIPT_NESTED2"'","cwd":"'"$TEST_DIR"'"}')
+assert_contains "nested JSON no promise → block" '"block"' "$OUTPUT"
+
+# ---- Test 12: SubagentStop — non-TDD subagent (promise not in transcript) → allow ----
+rm -f "$STATE_FILE"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+
+TRANSCRIPT_REVIEW="$TEST_DIR/transcript_review.jsonl"
+echo '{"role":"user","content":"Review the code for security issues"}' > "$TRANSCRIPT_REVIEW"
+echo '{"role":"assistant","content":"I found 2 issues: XSS in login.py and SQL injection in query.py"}' >> "$TRANSCRIPT_REVIEW"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","hook_event_name":"SubagentStop","transcript_path":"'"$TRANSCRIPT_REVIEW"'","cwd":"'"$TEST_DIR"'"}')
+assert_empty "SubagentStop non-TDD subagent → allow exit" "$OUTPUT"
+
+# ---- Test 13: SubagentStop — TDD subagent (promise in prompt but not last msg) → block ----
+rm -f "$STATE_FILE"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Build the auth module"
+
+TRANSCRIPT_TDD="$TEST_DIR/transcript_tdd.jsonl"
+echo '{"role":"user","content":"Build section-01-auth. Output SECTION_COMPLETE when tests pass."}' > "$TRANSCRIPT_TDD"
+echo '{"role":"assistant","content":"I am still working on it, tests failing"}' >> "$TRANSCRIPT_TDD"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","hook_event_name":"SubagentStop","transcript_path":"'"$TRANSCRIPT_TDD"'","cwd":"'"$TEST_DIR"'"}')
+assert_contains "SubagentStop TDD subagent no promise → block" '"block"' "$OUTPUT"
+
 # Summary
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

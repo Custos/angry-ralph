@@ -122,6 +122,29 @@ with open(pfile, 'w') as f:
 " "$pfile" "$field" "$value"
 }
 
+# Remove a value from a list field in pipeline.json.
+# $1 = project directory, $2 = field name, $3 = value to remove
+pipeline_remove_from_list() {
+  local project_dir="$1"
+  local field="$2"
+  local value="$3"
+  local pfile="$project_dir/.ralph-state/pipeline.json"
+
+  python3 -c "
+import json, sys
+pfile = sys.argv[1]
+field = sys.argv[2]
+value = sys.argv[3]
+with open(pfile, 'r') as f:
+    cfg = json.load(f)
+lst = cfg.get(field, [])
+lst = [v for v in lst if v != value]
+cfg[field] = lst
+with open(pfile, 'w') as f:
+    json.dump(cfg, f, indent=2)
+" "$pfile" "$field" "$value"
+}
+
 # Check if a .done marker exists.
 # $1 = project directory, $2 = phase name (architect, review, execute)
 # Returns: exit 0 if done, exit 1 if not.
@@ -223,13 +246,14 @@ case "$CMD" in
   read)           pipeline_read "$@" ;;
   write)          pipeline_write "$@" ;;
   append)         pipeline_append "$@" ;;
+  remove_from_list) pipeline_remove_from_list "$@" ;;
   check_done)     check_done "$@" ;;
   write_done)     write_done "$@" ;;
   remove_done)    remove_done "$@" ;;
   migrate)        migrate_legacy "$@" ;;
   status)         pipeline_status "$@" ;;
   *)
-    echo "Usage: pipeline.sh <init|create|read|write|append|check_done|write_done|remove_done|migrate|status> [args...]"
+    echo "Usage: pipeline.sh <init|create|read|write|append|remove_from_list|check_done|write_done|remove_done|migrate|status> [args...]"
     exit 1
     ;;
 esac

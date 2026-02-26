@@ -15,10 +15,11 @@ Run Phases 4-6: Split the plan into sections, execute each via TDD Ralph Loop, a
 If `--rebuild` is passed:
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh remove_done . "execute-<section>"
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh remove_done . "<section>"
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh remove_from_list . "completed_sections" "<section>"
 ```
 
-Remove the section from `completed_sections` in pipeline.json and continue.
+Both the `.done` marker file and the `completed_sections` array entry are removed, so the section will be re-executed.
 
 ## 2. Prerequisites
 

@@ -70,6 +70,19 @@ bash "$PIPELINE" append "$TEST_DIR" "completed_phases" "plan"
 COMPLETED=$(bash "$PIPELINE" read "$TEST_DIR" "completed_phases")
 assert_eq "append is idempotent" "decompose,plan" "$COMPLETED"
 
+# ---- Test 6b: remove_from_list removes a value ----
+bash "$PIPELINE" remove_from_list "$TEST_DIR" "completed_phases" "plan"
+COMPLETED=$(bash "$PIPELINE" read "$TEST_DIR" "completed_phases")
+assert_eq "remove_from_list removes item" "decompose" "$COMPLETED"
+
+# ---- Test 6c: remove_from_list is safe for missing values ----
+bash "$PIPELINE" remove_from_list "$TEST_DIR" "completed_phases" "nonexistent"
+COMPLETED=$(bash "$PIPELINE" read "$TEST_DIR" "completed_phases")
+assert_eq "remove_from_list ignores missing" "decompose" "$COMPLETED"
+
+# Re-add plan for subsequent tests
+bash "$PIPELINE" append "$TEST_DIR" "completed_phases" "plan"
+
 # ---- Test 7: check_done returns false when no marker ----
 bash "$PIPELINE" check_done "$TEST_DIR" "architect" && DONE="true" || DONE="false"
 assert_eq "check_done false when missing" "false" "$DONE"
