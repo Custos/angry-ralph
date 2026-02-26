@@ -41,7 +41,7 @@ angry-ralph works out-of-the-box with only the required tools. External CLIs upg
 Verify your environment:
 
 ```bash
-bash ./angry-ralph/scripts/checks/validate-env.sh
+bash /path/to/angry-ralph/scripts/checks/validate-env.sh
 ```
 
 ## Quick Start
@@ -57,13 +57,13 @@ git clone https://github.com/Custos/angry-ralph.git
 From your **target project directory** (where the code will be built):
 
 ```bash
-claude --plugin-dir ./angry-ralph
+claude --plugin-dir /path/to/angry-ralph
 ```
 
 Or for fully autonomous execution (no permission prompts):
 
 ```bash
-claude --plugin-dir ./angry-ralph --dangerously-skip-permissions
+claude --plugin-dir /path/to/angry-ralph --dangerously-skip-permissions
 ```
 
 > **Warning:** `--dangerously-skip-permissions` gives Claude unrestricted access to your filesystem, shell, and network. The Ralph Loop is designed to run autonomously and will hit permission prompts repeatedly without this flag, but you should understand the risk. Use in isolated environments or repositories you trust. The TDD gate and fail-closed Stop hook provide safety at the execution level, but they do not replace filesystem-level caution.

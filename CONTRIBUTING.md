@@ -38,13 +38,13 @@ bash ./angry-ralph/scripts/checks/validate-env.sh
 Load the plugin into Claude Code from your working copy:
 
 ```bash
-claude --plugin-dir ./angry-ralph
+claude --plugin-dir /path/to/angry-ralph
 ```
 
 For fully autonomous loop execution (no permission prompts):
 
 ```bash
-claude --plugin-dir ./angry-ralph --dangerously-skip-permissions
+claude --plugin-dir /path/to/angry-ralph --dangerously-skip-permissions
 ```
 
 > **Note:** `--dangerously-skip-permissions` is practically necessary for the Ralph Loop to run without interruption, but it grants unrestricted filesystem and shell access. Use in isolated environments.
