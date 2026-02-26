@@ -18,6 +18,10 @@ angry-ralph is a unified multi-LLM planning and TDD execution pipeline. It trans
 | `/angry-review-code` | On-demand adversarial review of code against the plan |
 | `/angry-review-plan` | On-demand adversarial review of the implementation plan |
 | `/angry-review-section <name-or-number>` | On-demand adversarial review of a specific section |
+| `/angry-status` | Show current pipeline state |
+| `/angry-skip-to <phase>` | Advance pipeline to a specific phase |
+| `/angry-rerun <phase>` | Re-run a specific phase, resetting its artifacts |
+| `/angry-split` | Re-generate section specs from the current plan |
 | `/angry-ralph-help` | Show this help |
 
 ## The 6-Phase Workflow
