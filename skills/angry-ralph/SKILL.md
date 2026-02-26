@@ -43,6 +43,7 @@ Parse the invocation arguments:
 - **`@file.md`** (required) -- Path to the input specification file. Reject invocation if no spec file is provided.
 - **`--max-review-iterations N`** (optional, default: 3) -- Maximum number of adversarial review iterations in Phase 3 and Phase 6.
 - **`--max-section-review-iterations N`** (optional, default: 2) -- Maximum number of per-section review-fix iterations during Phase 5.
+- **`--max-tdd-iterations N`** (optional, default: 20) -- Maximum TDD loop iterations per section before escalating to user. Stored in `planning/config.json`.
 
 Validate that the spec file exists and is readable. Store the resolved absolute path for use across all phases.
 
@@ -196,6 +197,12 @@ Output the completion promise `SECTION_COMPLETE` only when ALL of the following 
 - Every assertion passes (no skipped or ignored tests)
 - No compilation or runtime errors during test execution
 - The implementation satisfies the section spec's acceptance criteria
+
+If the SubagentStop hook detects that `iteration >= max_tdd_iterations` (from `planning/config.json`, default 20), it allows exit with a `tdd_cap_reached` signal instead of blocking. The main session then asks the user via `AskUserQuestion`: "Section X failed after N TDD iterations. Review errors, skip section, or keep trying (+10 iterations)?"
+
+- **Skip section**: Mark the section as `failed` in `planning/sections/index.md` and advance to the next section.
+- **Keep trying**: Add 10 to `max_tdd_iterations` in config.json and re-dispatch the subagent.
+- **Review errors**: Display the last test output for user inspection before deciding.
 
 ### 5. Section Review Gate
 

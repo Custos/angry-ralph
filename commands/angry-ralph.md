@@ -15,6 +15,7 @@ Parse the invocation arguments:
 - **`@file.md`** (required) -- The input specification file. This is the `@`-prefixed file reference provided by the user.
 - **`--max-review-iterations N`** (optional, default: `3`) -- Maximum adversarial review iterations for Phase 3 and Phase 6.
 - **`--max-section-review-iterations N`** (optional, default: `2`) -- Maximum per-section review-fix iterations during Phase 5.
+- **`--max-tdd-iterations N`** (optional, default: `20`) -- Maximum TDD loop iterations per section before escalating to user.
 
 If no `@file.md` argument is provided, report an error and display usage:
 
@@ -26,6 +27,7 @@ Usage: /angry-ralph @spec-file.md [--max-review-iterations N] [--max-section-rev
   @spec-file.md                    Path to the input specification file (required)
   --max-review-iterations N        Max review loop iterations (default: 3)
   --max-section-review-iterations N  Max per-section review-fix iterations (default: 2)
+  --max-tdd-iterations N           Max TDD loop iterations per section (default: 20)
 ```
 
 Stop execution after displaying usage.
@@ -86,6 +88,7 @@ Initialize the session config file at `${SPEC_DIR}/planning/config.json`:
   "spec_file": "<absolute path to spec file>",
   "max_review_iterations": <N>,
   "max_section_review_iterations": <N>,
+  "max_tdd_iterations": <N>,
   "started_at": "<ISO 8601 timestamp>",
   "current_phase": "decompose",
   "completed_phases": [],

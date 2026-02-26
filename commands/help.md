@@ -13,7 +13,7 @@ angry-ralph is a unified multi-LLM planning and TDD execution pipeline. It trans
 
 | Command | Description |
 |---------|-------------|
-| `/angry-ralph @spec.md [--max-review-iterations N]` | Start the pipeline against a spec file |
+| `/angry-ralph @spec.md [options]` | Start the pipeline against a spec file |
 | `/cancel-ralph` | Cancel the active Ralph Loop |
 | `/review-code` | On-demand adversarial review of code against the plan |
 | `/review-plan` | On-demand adversarial review of the implementation plan |
@@ -76,12 +76,14 @@ angry-ralph/scripts/checks/validate-env.sh
 |--------|---------|-------------|
 | `--max-review-iterations N` | `3` | Max adversarial review rounds in Phase 3 and Phase 6 |
 | `--max-section-review-iterations N` | `2` | Max per-section review-fix iterations in Phase 5 |
+| `--max-tdd-iterations N` | `20` | Max TDD loop iterations per section before escalating |
 
 When the maximum review iterations are reached without a clean review, remaining open
 items are presented to the user for a proceed-or-continue decision.
 
-The TDD loop within each section (Phase 5) has **no iteration cap** — it is purely
-test-gated. The section review gate that runs after TDD passes has a configurable cap
+The TDD loop within each section (Phase 5) has a configurable iteration cap (default 20,
+via `--max-tdd-iterations`). When the cap is reached, the pipeline asks the user whether
+to skip the section, keep trying (+10 iterations), or review the errors. The section review gate that runs after TDD passes has a configurable cap
 (default 2). If the cap is reached with findings still open, they are logged and the
 pipeline proceeds.
 
