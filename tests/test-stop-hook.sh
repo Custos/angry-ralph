@@ -122,6 +122,28 @@ assert_contains "corrupt transcript → block decision" '"decision"' "$OUTPUT"
 assert_contains "corrupt transcript → block value" '"block"' "$OUTPUT"
 assert_contains "corrupt transcript → mentions error" "TOOLING ERROR" "$OUTPUT"
 
+# ---- Test 7: Swapped promise (SECTION_REVIEW_FIX_COMPLETE) gates correctly ----
+rm -f "$STATE_FILE"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_REVIEW_FIX_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Fix review findings"
+
+TRANSCRIPT4="$TEST_DIR/transcript4.jsonl"
+echo '{"role":"user","content":"fix the issues"}' > "$TRANSCRIPT4"
+echo '{"role":"assistant","content":"All fixed! SECTION_REVIEW_FIX_COMPLETE"}' >> "$TRANSCRIPT4"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"'"$TRANSCRIPT4"'","cwd":"'"$TEST_DIR"'"}')
+assert_empty "swapped promise found → empty stdout (allow)" "$OUTPUT"
+
+# ---- Test 7b: Swapped promise — wrong promise in transcript → block ----
+rm -f "$STATE_FILE"
+create_state_file "$STATE_FILE" "execute" "1" "3" "section-01-auth" "SECTION_REVIEW_FIX_COMPLETE" "/tmp/spec.md" "/tmp/planning/" "Fix review findings"
+
+TRANSCRIPT5="$TEST_DIR/transcript5.jsonl"
+echo '{"role":"assistant","content":"Done! SECTION_COMPLETE"}' > "$TRANSCRIPT5"
+
+OUTPUT=$(run_hook_stdout '{"session_id":"test","transcript_path":"'"$TRANSCRIPT5"'","cwd":"'"$TEST_DIR"'"}')
+assert_contains "wrong promise for swapped state → block" '"decision"' "$OUTPUT"
+assert_contains "wrong promise for swapped state → block value" '"block"' "$OUTPUT"
+
 # Summary
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

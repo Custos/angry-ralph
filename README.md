@@ -20,8 +20,8 @@ Give angry-ralph a spec file and it runs a 6-phase pipeline:
 | **2. PLAN** | Writes a detailed implementation plan with numbered sections |
 | **3. ADVERSARIAL REVIEW** | Dispatches Gemini and Codex CLIs to review the plan, triages findings, iterates up to N times |
 | **4. SPLIT** | Finalizes the plan into individual section spec files |
-| **5. EXECUTE** | TDD Ralph Loop per section: tests first, implement, all tests pass, atomic commit |
-| **6. FINAL REVIEW** | External LLMs review the completed codebase for integration issues |
+| **5. EXECUTE** | TDD Ralph Loop per section: tests first, implement, all tests pass, inline review gate, atomic commit |
+| **6. FINAL REVIEW** | Self-healing review loop: external LLMs review, fix, re-review until clean or capped |
 
 Every phase produces persistent artifacts on disk. If the session is interrupted, re-running the command detects prior state and offers to resume.
 
@@ -80,6 +80,12 @@ With a custom review iteration cap:
 /angry-ralph @path/to/your-spec.md --max-review-iterations 5
 ```
 
+With a custom section review iteration cap:
+
+```
+/angry-ralph @path/to/your-spec.md --max-section-review-iterations 3
+```
+
 The current working directory should be a git repo (or angry-ralph will offer to `git init` one for you). This is where the code gets built.
 
 ## Commands
@@ -88,6 +94,9 @@ The current working directory should be a git repo (or angry-ralph will offer to
 |---------|-------------|
 | `/angry-ralph @spec.md` | Start the 6-phase pipeline against a spec file |
 | `/cancel-ralph` | Cancel an active Ralph Loop and remove state |
+| `/review-code` | On-demand adversarial review of code against the plan |
+| `/review-plan` | On-demand adversarial review of the implementation plan |
+| `/review-section <name>` | On-demand adversarial review of a specific section |
 | `/angry-ralph-help` | Show usage, workflow overview, and prerequisites |
 
 ## Architecture
@@ -101,6 +110,9 @@ The current working directory should be a git repo (or angry-ralph will offer to
 ├── commands/
 │   ├── angry-ralph.md           # Main pipeline entry point
 │   ├── cancel-ralph.md          # Loop cancellation
+│   ├── review-code.md           # On-demand code review
+│   ├── review-plan.md           # On-demand plan review
+│   ├── review-section.md        # On-demand section review
 │   └── help.md                  # Usage docs
 ├── hooks/
 │   ├── hooks.json               # Stop + SubagentStop hook registration
@@ -118,6 +130,7 @@ The current working directory should be a git repo (or angry-ralph will offer to
 │           ├── review-protocol.md
 │           ├── tdd-protocol.md
 │           ├── loop-protocol.md
+│           ├── section-review-protocol.md
 │           └── final-review-protocol.md
 └── tests/
     ├── test-state.sh
@@ -181,7 +194,7 @@ Or all at once:
 for t in tests/test-*.sh; do echo "=== $t ==="; bash "$t"; echo; done
 ```
 
-**68 tests** across 4 suites covering state management, environment validation, stop hook behavior (including fail-closed on corrupt transcripts), and plugin structure integrity.
+**84 tests** across 4 suites covering state management, environment validation, stop hook behavior (including fail-closed on corrupt transcripts, promise swap gating), and plugin structure integrity.
 
 ## Planning Artifacts
 
@@ -196,6 +209,14 @@ planning/
 │   ├── iteration-1/
 │   │   ├── gemini-review.md
 │   │   └── codex-review.md
+│   ├── sections/
+│   │   └── section-01-name/
+│   │       ├── review-1.md
+│   │       └── review-2.md
+│   ├── on-demand/
+│   │   ├── code-<timestamp>/
+│   │   ├── plan-<timestamp>/
+│   │   └── section-<name>-<timestamp>/
 │   └── final/
 │       ├── gemini-review.md
 │       └── codex-review.md

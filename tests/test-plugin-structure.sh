@@ -43,6 +43,12 @@ assert_exists "help command" "commands/help.md"
 assert_contains "angry-ralph has frontmatter" "commands/angry-ralph.md" "name: angry-ralph"
 assert_contains "cancel-ralph has frontmatter" "commands/cancel-ralph.md" "name: cancel-ralph"
 assert_contains "help has frontmatter" "commands/help.md" "name: angry-ralph-help"
+assert_exists "review-code command" "commands/review-code.md"
+assert_exists "review-plan command" "commands/review-plan.md"
+assert_exists "review-section command" "commands/review-section.md"
+assert_contains "review-code has frontmatter" "commands/review-code.md" "name: review-code"
+assert_contains "review-plan has frontmatter" "commands/review-plan.md" "name: review-plan"
+assert_contains "review-section has frontmatter" "commands/review-section.md" "name: review-section"
 
 # Agent
 assert_exists "external-reviewer agent" "agents/external-reviewer.md"
@@ -63,6 +69,7 @@ assert_exists "review protocol" "skills/angry-ralph/references/review-protocol.m
 assert_exists "tdd protocol" "skills/angry-ralph/references/tdd-protocol.md"
 assert_exists "loop protocol" "skills/angry-ralph/references/loop-protocol.md"
 assert_exists "final review protocol" "skills/angry-ralph/references/final-review-protocol.md"
+assert_exists "section review protocol" "skills/angry-ralph/references/section-review-protocol.md"
 
 # Hooks
 assert_exists "hooks.json" "hooks/hooks.json"

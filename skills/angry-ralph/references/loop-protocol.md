@@ -18,6 +18,7 @@ iteration: 1
 max_iterations: 0
 current_section: section-01-name
 completion_promise: SECTION_COMPLETE
+review_iteration: 0
 started_at: "2026-02-25T12:00:00Z"
 spec_file: path/to/spec.md
 planning_dir: path/to/planning/
@@ -34,6 +35,7 @@ The prompt text that gets fed back on each loop iteration.
 - `max_iterations` — Maximum iterations allowed. `0` means unlimited (test-gated exit only).
 - `current_section` — The section identifier currently being implemented.
 - `completion_promise` — The exact string that must appear in output to permit exit.
+- `review_iteration` — Current section review iteration (0 = no review yet). Used by the section review gate.
 - `started_at` — ISO 8601 timestamp of when the loop was activated.
 - `spec_file` — Path to the original spec file.
 - `planning_dir` — Path to the planning directory.
@@ -47,9 +49,10 @@ The prompt text that gets fed back on each loop iteration.
 3. **Iterate** — The subagent works on the section: writes tests first, then implements to pass them.
 4. **Exit attempt** — The subagent attempts to stop after completing work.
 5. **SubagentStop hook intercepts** — Read the state file and check the transcript for the completion promise.
-6. **Promise found** — Allow exit. Proceed to atomic commit.
+6. **Promise found** — Allow exit. Proceed to section review gate.
 7. **Promise not found** — Block exit. Increment `iteration` and feed back the prompt body.
-8. **Successful exit** — Perform an atomic commit and advance to the next section.
+8. **Section review gate** — Main session reviews changed files inline against the section spec (see `references/section-review-protocol.md`). If issues found, swap `completion_promise` to `SECTION_REVIEW_FIX_COMPLETE`, dispatch fix subagent, re-review. Max `max_section_review_iterations` cycles.
+9. **Successful exit** — Perform an atomic commit and advance to the next section.
 
 ---
 
@@ -75,8 +78,10 @@ After a section completes (all tests pass and the commit is done):
 
 1. Update the state file: set `current_section` to the next section identifier.
 2. Reset `iteration` to `1`.
-3. Replace the prompt body with the next section's spec content.
-4. If no more sections remain, set `active=false` or remove the state file entirely.
+3. Reset `review_iteration` to `0`.
+4. Restore `completion_promise` to `SECTION_COMPLETE`.
+5. Replace the prompt body with the next section's spec content.
+6. If no more sections remain, set `active=false` or remove the state file entirely.
 
 ---
 

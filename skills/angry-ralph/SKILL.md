@@ -42,6 +42,7 @@ Parse the invocation arguments:
 
 - **`@file.md`** (required) -- Path to the input specification file. Reject invocation if no spec file is provided.
 - **`--max-review-iterations N`** (optional, default: 3) -- Maximum number of adversarial review iterations in Phase 3 and Phase 6.
+- **`--max-section-review-iterations N`** (optional, default: 2) -- Maximum number of per-section review-fix iterations during Phase 5.
 
 Validate that the spec file exists and is readable. Store the resolved absolute path for use across all phases.
 
@@ -188,15 +189,36 @@ Output the completion promise `SECTION_COMPLETE` only when ALL of the following 
 - No compilation or runtime errors during test execution
 - The implementation satisfies the section spec's acceptance criteria
 
-### 5. Atomic Commit
+### 5. Section Review Gate
 
-After a section passes all tests and the hook permits exit:
+After the SubagentStop hook permits exit and before committing, perform an inline code review of the section's changes. The main session executes this review directly — no subagent or external CLI.
+
+1. Run `git diff --name-only HEAD` to identify changed files.
+2. Read each changed file and the current section spec.
+3. Evaluate against the review checklist (plan-vs-code fidelity, implementation substance, algorithm correctness, test quality, integration readiness).
+4. Tag findings as `[CRITICAL]`, `[WARNING]`, or `[INFO]`.
+
+**If CRITICAL or actionable WARNING findings exist:**
+
+1. Write findings to `planning/reviews/sections/<section-name>/review-N.md`.
+2. Swap `completion_promise` to `SECTION_REVIEW_FIX_COMPLETE` and update `review_iteration` in the state file.
+3. Dispatch a fresh fix subagent with the findings, section spec, and instructions to fix issues and output `SECTION_REVIEW_FIX_COMPLETE` when tests pass.
+4. After the fix subagent exits, re-review. Repeat up to `max_section_review_iterations` times (default: 2, from `planning/config.json`).
+5. When clean or cap reached, restore `completion_promise` to `SECTION_COMPLETE` and reset `review_iteration` to 0.
+
+If the iteration cap is reached with findings still open, log them and proceed to commit. Do not prompt the user.
+
+Consult `references/section-review-protocol.md` for the full review checklist, severity definitions, fix cycle, and output format.
+
+### 6. Atomic Commit
+
+After a section passes all tests, the review gate clears, and the hook permits exit:
 
 - Stage only the files changed for the completed section
 - Commit with message format: `feat(section-NN): <section-name>`
 - Do not stage unrelated files or amend previous commits
 
-### 6. Advance to Next Section
+### 7. Advance to Next Section
 
 Update the state file: set `current_section` to the next section, reset `iteration` to 1, and replace the prompt body with the next section's spec. If no sections remain, proceed to Phase 6.
 
@@ -212,28 +234,34 @@ Initiate final review only after every implementation section has been completed
 
 Print the active review tier before spawning the reviewer, same as Phase 3.
 
-### Procedure
+### Self-Healing Review Loop
 
-1. Create the final review directory: `mkdir -p planning/reviews/final/`
-2. Spawn the `external-reviewer` subagent with review type set to `"final integration review"`.
+Phase 6 uses a review-fix-review loop — it does NOT declare completion after a single triage pass. The loop ensures fixes are verified and don't introduce new issues.
+
+For each iteration (up to `max_review_iterations`, default 3):
+
+1. Create the review directory: `mkdir -p planning/reviews/final/iteration-N/`
+2. Spawn the `external-reviewer` subagent with review type `"final integration review"`.
 3. Provide the subagent with the active review tier, available reviewers, project directory path, plan file path, and sections directory.
-4. The subagent invokes the available reviewers based on the active tier, focusing on integration bugs, emergent security vulnerabilities, plan-vs-code gaps, and missing error handling. All findings are tagged with their source (`[Gemini]`, `[Codex]`, or `[Claude-Reflection]`).
+4. The subagent invokes the available reviewers, focusing on integration bugs, security vulnerabilities, plan-vs-code gaps, and missing error handling. All findings tagged with source.
+5. Triage all findings: fix CRITICAL immediately, evaluate WARNING, resolve clear questions, escalate genuine ambiguity via `AskUserQuestion`.
+6. If zero CRITICAL and zero actionable WARNING findings remain — break. Review is clean.
+7. If findings were fixed: re-run the full test suite, commit fixes as `fix: address final review findings (iteration N)`, then loop back to step 1 for re-review.
 
-### Triage
+### Iteration Cap
 
-Apply the same triage decision tree as Phase 3. Fix all CRITICAL issues immediately, evaluate WARNING items, resolve clear questions autonomously, and escalate genuine ambiguities to the user via `AskUserQuestion` (MANDATORY).
-
-### After Triage
-
-If any fixes were made, re-run the full test suite to confirm no regressions. Commit all fixes together: `fix: address final review findings`.
-
-Produce a summary report: total findings per severity, what was fixed with corresponding commits, what was noted but not actionable, and any remaining known limitations.
+When `max_review_iterations` is exhausted with findings still open:
+- Log remaining findings to `planning/reviews/final/unresolved.md`
+- Proceed to completion — do NOT block the pipeline
+- The unresolved file serves as a production roadmap
 
 ### Pipeline Completion
 
+Produce a summary report at `planning/reviews/final/review-summary.md`: total iterations, findings per severity, fixes with commits, unresolved items.
+
 Deactivate the state file by setting `active=false` or removing it entirely. Report full pipeline completion to the user. List every commit made during the session in chronological order.
 
-Consult `references/final-review-protocol.md` for the complete final review procedure, CLI focus areas, and completion steps.
+Consult `references/final-review-protocol.md` for the complete final review loop, triage decision tree, fix rules, and completion steps.
 
 ## State Management
 
@@ -257,6 +285,7 @@ Store session configuration in `planning/config.json` for resume support. Includ
 
 - Original spec file path
 - Max review iterations setting
+- Max section review iterations setting
 - Pipeline start timestamp
 - Current phase at time of last checkpoint
 - List of completed phases
@@ -311,4 +340,5 @@ All detailed procedures are defined in the reference protocol files. Consult the
 - **`references/review-protocol.md`** -- Review loop and triage rules. Defines review tier detection, CLI invocation patterns for gemini, codex, and claude fallback, source attribution tags, the triage decision tree, and iteration control logic.
 - **`references/tdd-protocol.md`** -- Test-driven development enforcement. Specifies the red-green cycle, test command detection, definition of "tests pass," completion promise rules, and handling of test failures and flaky tests.
 - **`references/loop-protocol.md`** -- Ralph Loop state machine and lifecycle. Documents the state file format, field definitions, loop activation, section-to-section transitions, atomic commit rules, and the cancel mechanism.
+- **`references/section-review-protocol.md`** -- Per-section code review gate. Defines the inline review checklist, severity tags, fix subagent dispatch with promise swap, iteration cap, and output storage.
 - **`references/final-review-protocol.md`** -- Integration review procedure. Covers trigger conditions, CLI review focus areas, triage logic, post-triage actions, and pipeline completion reporting.

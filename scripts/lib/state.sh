@@ -62,6 +62,7 @@ iteration: ${iteration}
 max_iterations: ${max_iterations}
 current_section: ${current_section}
 completion_promise: ${completion_promise}
+review_iteration: 0
 started_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 spec_file: ${spec_file}
 planning_dir: ${planning_dir}

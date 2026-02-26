@@ -15,6 +15,9 @@ angry-ralph is a unified multi-LLM planning and TDD execution pipeline. It trans
 |---------|-------------|
 | `/angry-ralph @spec.md [--max-review-iterations N]` | Start the pipeline against a spec file |
 | `/cancel-ralph` | Cancel the active Ralph Loop |
+| `/review-code` | On-demand adversarial review of code against the plan |
+| `/review-plan` | On-demand adversarial review of the implementation plan |
+| `/review-section <name-or-number>` | On-demand adversarial review of a specific section |
 | `/angry-ralph-help` | Show this help |
 
 ## The 6-Phase Workflow
@@ -38,19 +41,28 @@ angry-ralph is a unified multi-LLM planning and TDD execution pipeline. It trans
 
 5. **Phase 5: EXECUTE** -- Run the Ralph Loop for each section in order. Each section
    follows a strict TDD red-green cycle: write failing tests first, then implement
-   until all tests pass. The loop is test-gated with no iteration cap -- sections
-   complete only when the test runner exits cleanly.
+   until all tests pass. After TDD passes, an inline review gate checks the code
+   against the section spec for stubs, plan-vs-code gaps, and test quality. Issues
+   trigger a fix subagent and re-review (up to N iterations, default 2).
 
-6. **Phase 6: FINAL REVIEW** -- Run a full integration review over the completed
-   codebase using `gemini` and `codex`, focusing on cross-section integration bugs,
-   security vulnerabilities, and plan-vs-code gaps.
+6. **Phase 6: FINAL REVIEW** -- Run a self-healing review loop over the completed
+   codebase using `gemini` and `codex`. Finds integration bugs, security
+   vulnerabilities, and plan-vs-code gaps, then fixes them, re-reviews to verify,
+   and repeats until clean or max iterations reached (default 3).
 
 ## Prerequisites
 
-- **`gemini` CLI** -- Installed and available in PATH
-- **`codex` CLI** -- Installed and available in PATH
+**Required:**
+- **`claude`** -- Claude Code CLI, installed and available in PATH
 - **`git`** -- Installed and available in PATH
+- **`python3`** -- Installed and available in PATH
 - **Git repository** -- The current working directory must be inside a git repository
+
+**Optional (upgrades review tier):**
+- **`gemini` CLI** -- Enables adversarial review via Gemini
+- **`codex` CLI** -- Enables adversarial review via Codex
+
+The plugin works out-of-the-box with only the required tools. External CLIs upgrade the review from Self-Reflection (Claude only) to Partial (one CLI + Claude) or Adversarial (both CLIs).
 
 Run the environment validation script to check all prerequisites:
 
@@ -63,12 +75,15 @@ angry-ralph/scripts/checks/validate-env.sh
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--max-review-iterations N` | `3` | Max adversarial review rounds in Phase 3 and Phase 6 |
+| `--max-section-review-iterations N` | `2` | Max per-section review-fix iterations in Phase 5 |
 
 When the maximum review iterations are reached without a clean review, remaining open
 items are presented to the user for a proceed-or-continue decision.
 
-The execution loop (Phase 5) has **no iteration cap**. It is purely test-gated: each
-section loops until all tests pass and the completion promise is emitted.
+The TDD loop within each section (Phase 5) has **no iteration cap** — it is purely
+test-gated. The section review gate that runs after TDD passes has a configurable cap
+(default 2). If the cap is reached with findings still open, they are logged and the
+pipeline proceeds.
 
 ## Resume
 

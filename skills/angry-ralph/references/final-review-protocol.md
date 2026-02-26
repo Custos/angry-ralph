@@ -54,34 +54,78 @@ Every finding in the review output must be tagged with its source:
 
 This enables the user to assess the variance and quality of each review source.
 
-## Triage Logic
+## Review-Fix-Review Loop
 
-Apply the same decision tree used in Phase 3 (adversarial review):
+Phase 6 uses a self-healing loop: review → triage → fix → re-run tests → re-review → repeat until clean or max iterations reached. This ensures fixes are verified and don't introduce new issues.
 
-1. **[CRITICAL]** -- Fix immediately, re-run affected tests, commit the fix.
-2. **[WARNING]** -- Evaluate impact; fix if warranted; commit if changed.
-3. **Questions with clear answers** -- Resolve autonomously without user input.
+```
+iteration = 0
+max_iterations = max_review_iterations from config.json (default 3)
+
+while iteration < max_iterations:
+    create review directory: planning/reviews/final/iteration-{iteration + 1}/
+    spawn external-reviewer subagent
+    receive review payload
+    triage all findings per the decision tree below
+    if no CRITICAL and no actionable WARNING:
+        break  # clean review — proceed to completion
+    fix all CRITICAL and actionable WARNING findings
+    re-run full test suite — all tests must pass
+    commit fixes: "fix: address final review findings (iteration N)"
+    iteration += 1
+
+if iteration == max_iterations AND findings remain:
+    log remaining findings to planning/reviews/final/unresolved.md
+    proceed to completion (do NOT prompt the user)
+```
+
+### Triage Decision Tree
+
+Apply to each finding and question in the review payload:
+
+1. **[CRITICAL]** -- Fix immediately. These block completion.
+2. **[WARNING]** -- Evaluate impact. Fix if the warning represents a real risk to correctness, security, or reliability. Document rationale for any warning left unaddressed.
+3. **Questions with clear answers** -- Resolve autonomously from available context.
 4. **Questions with genuine ambiguity** -- Escalate via `AskUserQuestion` (MANDATORY).
-5. **[INFO]** -- Note for the record; do not block completion.
+5. **[INFO]** -- Note for the record. Do not block.
 
-When triaging, consider the source: findings from external models carry higher
-adversarial confidence than Claude-Reflection findings, which may share blind
-spots with the implementation session.
+When triaging, consider the source: findings from external models carry higher adversarial confidence than Claude-Reflection findings, which may share blind spots with the implementation session.
 
-## After Triage
+### Fix Rules
 
-- If any fixes were made, re-run the full test suite to confirm no regressions were introduced.
-- Commit all fixes together: `fix: address final review findings`.
-- Produce a summary report containing:
-  - Total number of findings per severity level, grouped by source.
-  - What was fixed and the corresponding commit(s).
-  - What was noted but determined not actionable.
-  - Any remaining concerns or known limitations.
-  - The active review tier used for this review.
+- Fix all CRITICAL findings before re-reviewing. Do not defer criticals.
+- After fixing, re-run the full test suite. All tests must pass before committing.
+- Commit fixes per iteration: `fix: address final review findings (iteration N)`.
+- Do NOT bundle fixes from multiple iterations into a single commit.
+
+### Re-Review Verification
+
+Each re-review iteration spawns a fresh external-reviewer subagent. The reviewer sees the current codebase state (including prior fixes). This ensures:
+- Fixes actually resolved the identified issues
+- Fixes didn't introduce new CRITICAL issues
+- Cross-cutting concerns are re-evaluated in light of changes
+
+### Iteration Cap
+
+When `max_review_iterations` is exhausted with findings still open:
+- Write all remaining findings to `planning/reviews/final/unresolved.md`
+- Proceed to pipeline completion — do NOT prompt the user or block
+- The unresolved findings file serves as a production roadmap
+
+## Summary Report
+
+After the loop exits (clean or capped), produce a summary report at `planning/reviews/final/review-summary.md`:
+
+- Total iterations run
+- Total findings per severity, grouped by source
+- What was fixed and the corresponding commit(s)
+- What was noted but not actionable
+- Any remaining unresolved findings (with reference to `unresolved.md`)
+- The active review tier used
 
 ## Completion
 
-After the final review and any resulting fixes are complete:
+After the final review loop and any resulting fixes:
 
 1. Deactivate the state file by setting `active=false` (or remove it entirely).
 2. Report full pipeline completion to the user.

@@ -115,7 +115,7 @@ All tests must pass before submitting a PR.
 
 ### Pull Requests
 
-1. Ensure all 4 test suites pass (62+ tests)
+1. Ensure all 4 test suites pass (84+ tests)
 2. Add tests for new functionality
 3. Update the README if you're adding commands, changing prerequisites, or modifying the pipeline
 4. Keep PRs focused — one feature or fix per PR
