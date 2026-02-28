@@ -190,10 +190,11 @@ Store review outputs at:
 ```
 
 Each review file should contain:
+- Reviewer (e.g., `inline (main session)`, `gemini`, `codex`, `claude-reflection`)
 - Timestamp
 - Section name
 - Review iteration number
-- List of findings with severity tags
+- List of findings with severity tags and source attribution
 - Disposition (fixed / deferred / noted)
 
 ---

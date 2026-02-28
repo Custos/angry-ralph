@@ -123,11 +123,30 @@ Store review outputs at:
 - `.planning/reviews/iteration-N/gemini-review.md` -- Gemini output (when available).
 - `.planning/reviews/iteration-N/codex-review.md` -- Codex output (when available).
 - `.planning/reviews/iteration-N/claude-review.md` -- Claude fallback output (when used).
+- `.planning/reviews/iteration-N/prompts.md` -- The exact prompts sent to each reviewer.
 
 For the final review (Phase 6), store in:
 - `.planning/reviews/final/gemini-review.md`
 - `.planning/reviews/final/codex-review.md`
 - `.planning/reviews/final/claude-review.md`
+- `.planning/reviews/final/prompts.md`
+
+### Prompt Log Format
+
+Before invoking each reviewer, write the exact prompt to `prompts.md`:
+
+```markdown
+## Gemini Prompt
+<the full prompt string passed to gemini -p>
+
+## Codex Prompt
+<the full prompt string passed to codex exec>
+
+## Claude Prompt
+<the full prompt string passed to claude -p>
+```
+
+This enables auditing which instructions each model received and debugging review quality differences.
 
 ## Triage Decision Tree
 

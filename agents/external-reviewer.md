@@ -40,6 +40,7 @@ You will be told which review tier is active and which reviewers are available. 
 - NEVER modify any files. You have Read and Bash only.
 - NEVER attempt to fix issues yourself. Report findings only.
 - ALWAYS tag every section of output with its source: `[Gemini]`, `[Codex]`, or `[Claude-Reflection]`.
+- ALWAYS write the exact prompts sent to each reviewer to `prompts.md` in the review output directory before invoking the CLIs. Format: `## Gemini Prompt`, `## Codex Prompt`, `## Claude Prompt` sections with the full prompt text.
 
 **Execution Strategy:**
 

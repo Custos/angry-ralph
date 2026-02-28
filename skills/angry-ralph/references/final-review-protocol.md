@@ -15,8 +15,9 @@ Initiate the final review only after ALL of the following conditions are met:
 ## How to Execute
 
 1. Create the final review output directory: `mkdir -p .planning/reviews/final/`
-2. Spawn the `external-reviewer` subagent via the Task tool.
-3. Provide the subagent with the following inputs:
+2. Write the exact prompts being sent to each reviewer to `.planning/reviews/final/prompts.md` (see review-protocol.md for format).
+3. Spawn the `external-reviewer` subagent via the Task tool.
+4. Provide the subagent with the following inputs:
    - Review type: `"final integration review"`
    - Active review tier and available reviewers (from `.ralph-state/pipeline.json`)
    - Project directory path (absolute)
