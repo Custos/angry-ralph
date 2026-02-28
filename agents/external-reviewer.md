@@ -44,9 +44,9 @@ You will be told which review tier is active and which reviewers are available. 
 
 **Execution Strategy:**
 
-When both gemini and codex are available (Adversarial tier), run them in **parallel**:
+**HARD RULE: For Adversarial tier (both gemini + codex available), you MUST invoke both CLIs in a SINGLE Bash tool call using background jobs (`&`) and `wait`. NEVER make separate Bash tool calls for each reviewer — that runs them sequentially and wastes time. The parallel script pattern below is the ONLY correct way to invoke Adversarial tier reviews.**
 
-1. Launch both CLI commands as background jobs.
+1. Launch both CLI commands as background jobs in ONE Bash call.
 2. Wait for both to complete.
 3. If a CLI exits with a non-zero code:
    a. Retry once.
@@ -54,11 +54,51 @@ When both gemini and codex are available (Adversarial tier), run them in **paral
 4. If BOTH external CLIs fail: fall back to claude (Self-Reflection).
 5. Collect all successful results and tag with source.
 
-For Partial tier (one CLI + claude): run the available CLI first, then claude. Apply the same retry logic to the CLI.
+For Partial tier (one CLI + claude): run both in a single Bash call using the same background job pattern.
 
 For Self-Reflection tier: run claude only. No retry needed (claude is always available).
 
-**CLI Invocation Patterns:**
+**Parallel Invocation Script (Adversarial Tier — REQUIRED):**
+
+For plan review, use this script in a SINGLE Bash tool call (substitute the actual prompt and iteration number):
+
+```bash
+ITER=N  # substitute actual iteration number
+REVIEW_DIR=".planning/reviews/iteration-${ITER}"
+mkdir -p "$REVIEW_DIR"
+
+# Launch both in parallel
+gemini -m gemini-3.1-pro-preview -p "<plan review prompt>" --approval-mode plan -o text > "$REVIEW_DIR/gemini-review.md" 2>&1 &
+GEMINI_PID=$!
+
+codex exec --model gpt-5.3-codex "<plan review prompt>" -C "$(pwd)" --sandbox read-only -o "$REVIEW_DIR/codex-review.md" &
+CODEX_PID=$!
+
+# Wait and capture exit codes
+wait $GEMINI_PID; GEMINI_EXIT=$?
+wait $CODEX_PID; CODEX_EXIT=$?
+
+# Retry on failure
+if [ $GEMINI_EXIT -ne 0 ]; then
+  gemini -m gemini-3.1-pro-preview -p "<plan review prompt>" --approval-mode plan -o text > "$REVIEW_DIR/gemini-review.md" 2>&1
+  GEMINI_EXIT=$?
+fi
+if [ $CODEX_EXIT -ne 0 ]; then
+  codex exec --model gpt-5.3-codex "<plan review prompt>" -C "$(pwd)" --sandbox read-only -o "$REVIEW_DIR/codex-review.md"
+  CODEX_EXIT=$?
+fi
+
+# Fallback if both failed
+if [ $GEMINI_EXIT -ne 0 ] && [ $CODEX_EXIT -ne 0 ]; then
+  claude -p "<plan review prompt>" --output-format text > "$REVIEW_DIR/claude-review.md" 2>&1
+fi
+
+echo "Gemini exit: $GEMINI_EXIT, Codex exit: $CODEX_EXIT"
+```
+
+For final code review, use the same pattern with the code review prompt and `REVIEW_DIR=".planning/reviews/final/iteration-${ITER}"`.
+
+**CLI Reference (prompt templates and flags):**
 
 ### Gemini (when available)
 
@@ -177,38 +217,6 @@ Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes)
 
 - The `--output-format text` flag ensures plain text output.
 - The prompt explicitly states "separate session" and "no prior context" to maximize review independence.
-
-### Parallel Execution Pattern (Adversarial Tier)
-
-When running both reviewers, use background jobs:
-
-```bash
-# Launch both in parallel
-gemini -m gemini-3.1-pro-preview -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1 &
-GEMINI_PID=$!
-
-codex exec --model gpt-5.3-codex "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md &
-CODEX_PID=$!
-
-# Wait and capture exit codes
-wait $GEMINI_PID; GEMINI_EXIT=$?
-wait $CODEX_PID; CODEX_EXIT=$?
-
-# Retry on failure
-if [ $GEMINI_EXIT -ne 0 ]; then
-  gemini -m gemini-3.1-pro-preview -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1
-  GEMINI_EXIT=$?
-fi
-if [ $CODEX_EXIT -ne 0 ]; then
-  codex exec --model gpt-5.3-codex "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md
-  CODEX_EXIT=$?
-fi
-
-# Fallback if both failed
-if [ $GEMINI_EXIT -ne 0 ] && [ $CODEX_EXIT -ne 0 ]; then
-  claude -p "<prompt>" --output-format text > .planning/reviews/iteration-N/claude-review.md 2>&1
-fi
-```
 
 **Output Format:**
 
