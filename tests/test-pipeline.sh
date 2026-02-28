@@ -38,6 +38,14 @@ bash "$PIPELINE" init "$TEST_DIR"
 COUNT=$(grep -cxF '.ralph-state/' "$TEST_DIR/.gitignore")
 assert_eq ".gitignore no duplicate .ralph-state/" "1" "$COUNT"
 
+# ---- Test 1d: misplaced pipeline.json at root gets moved ----
+MISPLACED_DIR=$(mktemp -d)
+echo '{"current_phase":"decompose"}' > "$MISPLACED_DIR/pipeline.json"
+bash "$PIPELINE" init "$MISPLACED_DIR"
+assert_eq "misplaced pipeline.json moved" "false" "$([ -f "$MISPLACED_DIR/pipeline.json" ] && echo true || echo false)"
+assert_eq "pipeline.json now in .ralph-state/" "true" "$([ -f "$MISPLACED_DIR/.ralph-state/pipeline.json" ] && echo true || echo false)"
+rm -rf "$MISPLACED_DIR"
+
 # ---- Test 2: pipeline_create writes valid JSON ----
 bash "$PIPELINE" create "$TEST_DIR" "/tmp/spec.md" "interactive" "3" "2" "20" "adversarial" "gemini,codex"
 assert_eq "pipeline.json exists" "true" "$([ -f "$TEST_DIR/.ralph-state/pipeline.json" ] && echo true || echo false)"
@@ -168,6 +176,22 @@ rm -rf "$PLAN_BOTH_DIR"
 # ---- Test 14: pipeline_read on missing file returns empty ----
 EMPTY=$(bash "$PIPELINE" read "/nonexistent" "mode")
 assert_eq "read on missing returns empty" "" "$EMPTY"
+
+# ---- Test 15: pipeline_write can add arbitrary new fields ----
+DIAG_DIR=$(mktemp -d)
+bash "$PIPELINE" create "$DIAG_DIR" "/tmp/spec.md" "interactive" "3" "2" "20" "adversarial" "gemini,codex"
+bash "$PIPELINE" write "$DIAG_DIR" "problem_description" "API returns 500 on large payloads"
+PROB=$(bash "$PIPELINE" read "$DIAG_DIR" "problem_description")
+assert_eq "write adds new string field" "API returns 500 on large payloads" "$PROB"
+
+bash "$PIPELINE" write "$DIAG_DIR" "max_hypotheses" "5"
+HYPO=$(bash "$PIPELINE" read "$DIAG_DIR" "max_hypotheses")
+assert_eq "write adds new numeric field" "5" "$HYPO"
+
+# Verify existing fields are untouched
+MODE=$(bash "$PIPELINE" read "$DIAG_DIR" "mode")
+assert_eq "existing fields preserved after adding new" "interactive" "$MODE"
+rm -rf "$DIAG_DIR"
 
 # Summary
 echo ""
