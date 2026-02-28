@@ -35,6 +35,7 @@ Commands:
   /angry-review [plan|code|section <n>] Phase 3 in pipeline. On-demand anytime.
   /angry-execute [--auto] [--rebuild <section>]  Phases 4-6: Split + TDD + Final Review.
   /angry-fix [context] [prompt]         Surgical TDD strike: test, fix, green, commit.
+  /angry-diagnose [@ctx] "problem"      Adversarial diagnosis: hypothesize, test, fix.
   /cancel-ralph                         Kill switch: halt loop, save state, exit.
   /angry-status                         Read-only pipeline state display.
 
@@ -100,19 +101,17 @@ If start fresh: `rm -rf .ralph-state/ .planning/` and continue.
 
 ## 5. Setup
 
-Initialize state via the Bash tool:
+Run these two Bash commands exactly as written. Do NOT create pipeline.json or directories manually — the script handles paths, gitignore, and JSON structure:
 
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh create . "<SPEC_FILE>" "<MODE>" "<MAX_REVIEW>" "<MAX_SECTION_REVIEW>" "<MAX_TDD>" "<REVIEW_TIER>" "<AVAILABLE_REVIEWERS>"
 ```
 
-Where `<MODE>` is `auto` if `--auto` was passed, otherwise `interactive`. Substitute actual values for all placeholders.
-
-Create planning directories:
-
 ```bash
 mkdir -p .planning/reviews .planning/sections
 ```
+
+Where `<MODE>` is `auto` if `--auto` was passed, otherwise `interactive`. Substitute actual values for all placeholders. The script creates `.ralph-state/pipeline.json` — never create this file directly.
 
 ## 6. Handoff to Skill
 
