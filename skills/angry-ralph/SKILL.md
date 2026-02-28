@@ -365,6 +365,11 @@ Phase completion tracked by marker files in `.ralph-state/phases/`:
 - `review.done` -- Phase 3 complete
 - `execute.done` -- Phases 4-6 complete
 
+Diagnosis mode (`/angry-diagnose`) uses its own markers:
+- `investigate.done` -- Phase 1 complete
+- `diagnose.done` -- Phase 2 complete
+- `fix.done` -- Phase 3 complete
+
 Managed via `pipeline.sh write_done|check_done|remove_done`.
 
 ### Phase Transition Tracking
@@ -413,3 +418,4 @@ All detailed procedures are defined in the reference protocol files. Consult the
 - **`references/loop-protocol.md`** -- Ralph Loop state machine and lifecycle. Documents the state file format, field definitions, loop activation, section-to-section transitions, atomic commit rules, and the cancel mechanism.
 - **`references/section-review-protocol.md`** -- Per-section code review gate. Defines the inline review checklist, severity tags, fix subagent dispatch with promise swap, iteration cap, and output storage.
 - **`references/final-review-protocol.md`** -- Integration review procedure. Covers trigger conditions, CLI review focus areas, triage logic, post-triage actions, and pipeline completion reporting.
+- **`references/diagnosis-protocol.md`** -- Adversarial bug diagnosis procedure. Covers case file construction, diagnosis prompt template for external reviewers, hypothesis merge/rank/cap algorithm, systematic elimination via diagnostic tests, fix report format, and verification iteration control.
