@@ -47,7 +47,7 @@ Pass file paths as arguments to all CLIs. **Never pipe content via stdin.**
 #### Gemini Invocation (when available)
 
 ```
-gemini -p "<review prompt referencing file paths>" --approval-mode plan -o text
+gemini -m gemini-3.1-pro-preview -p "<review prompt referencing file paths>" --approval-mode plan -o text
 ```
 
 - Use `--approval-mode plan` to enforce read-only operation.
@@ -57,7 +57,7 @@ gemini -p "<review prompt referencing file paths>" --approval-mode plan -o text
 #### Codex Invocation (when available)
 
 ```
-codex exec "<review prompt referencing file paths>" -C "$(pwd)" --sandbox read-only -o <output-file>
+codex exec --model gpt-5.3-codex "<review prompt referencing file paths>" -C "$(pwd)" --sandbox read-only -o <output-file>
 ```
 
 - Use `--sandbox read-only` to prevent any filesystem writes outside the output file.

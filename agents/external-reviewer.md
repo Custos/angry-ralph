@@ -64,7 +64,7 @@ For Self-Reflection tier: run claude only. No retry needed (claude is always ava
 
 For plan review:
 ```bash
-gemini -p "You are a senior architect performing adversarial review. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
+gemini -m gemini-3.1-pro-preview -p "You are a senior architect performing adversarial review. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
 
 METHODOLOGY:
 1. For every file path, function name, or dependency the plan references, verify it actually exists in the project. Flag phantom references.
@@ -80,7 +80,7 @@ Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes)
 
 For final code review:
 ```bash
-gemini -p "You are a senior architect performing adversarial integration review. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
+gemini -m gemini-3.1-pro-preview -p "You are a senior architect performing adversarial integration review. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
 
 METHODOLOGY:
 1. Read individual scripts, functions, and modules. Verify each one actually implements what its docs/comments claim.
@@ -102,7 +102,7 @@ Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes)
 
 For plan review:
 ```bash
-codex exec "You are a senior architect performing adversarial review. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
+codex exec --model gpt-5.3-codex "You are a senior architect performing adversarial review. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
 
 METHODOLOGY:
 1. For every file path, function name, or dependency the plan references, verify it actually exists in the project. Flag phantom references.
@@ -118,7 +118,7 @@ Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes)
 
 For final code review:
 ```bash
-codex exec "You are a senior architect performing adversarial integration review. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
+codex exec --model gpt-5.3-codex "You are a senior architect performing adversarial integration review. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
 
 METHODOLOGY:
 1. Read individual scripts, functions, and modules. Verify each one actually implements what its docs/comments claim.
@@ -184,10 +184,10 @@ When running both reviewers, use background jobs:
 
 ```bash
 # Launch both in parallel
-gemini -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1 &
+gemini -m gemini-3.1-pro-preview -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1 &
 GEMINI_PID=$!
 
-codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md &
+codex exec --model gpt-5.3-codex "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md &
 CODEX_PID=$!
 
 # Wait and capture exit codes
@@ -196,11 +196,11 @@ wait $CODEX_PID; CODEX_EXIT=$?
 
 # Retry on failure
 if [ $GEMINI_EXIT -ne 0 ]; then
-  gemini -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1
+  gemini -m gemini-3.1-pro-preview -p "<prompt>" --approval-mode plan -o text > .planning/reviews/iteration-N/gemini-review.md 2>&1
   GEMINI_EXIT=$?
 fi
 if [ $CODEX_EXIT -ne 0 ]; then
-  codex exec "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md
+  codex exec --model gpt-5.3-codex "<prompt>" -C "$(pwd)" --sandbox read-only -o .planning/reviews/iteration-N/codex-review.md
   CODEX_EXIT=$?
 fi
 
