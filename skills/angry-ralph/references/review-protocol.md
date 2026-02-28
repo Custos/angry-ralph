@@ -28,17 +28,23 @@ Example outputs:
 - `angry-ralph: Review tier — Partial (codex + claude fallback)`
 - `angry-ralph: Review tier — Self-Reflection (claude only)`
 
-## Spawning the External Reviewer
+## Spawning the External Reviewers
 
-Spawn the `external-reviewer` subagent via the Task tool with `subagent_type`
-set to `external-reviewer`. The subagent has access to **Bash and Read tools only** --
-it invokes the available CLIs to perform review. It cannot modify any files.
+Spawn `external-reviewer` subagents via the Task tool with `subagent_type`
+set to `external-reviewer`. Each subagent handles a SINGLE reviewer and has
+access to **Bash and Read tools only** — it invokes one CLI and writes its output.
+It cannot modify any project files.
 
-When spawning, include in the prompt:
-- The active review tier
-- Which reviewers are available (from `.ralph-state/pipeline.json` `available_reviewers` field)
+**Parallel dispatch**: For Adversarial tier, spawn TWO subagents in parallel
+(one for gemini, one for codex) in a single message with two Task tool calls.
+For Partial tier, spawn two subagents in parallel (one external CLI, one claude).
+For Self-Reflection, spawn one subagent (claude only).
+
+When spawning each subagent, include in the prompt:
+- Which single reviewer to invoke (gemini, codex, or claude)
 - The review type (plan review or final integration review)
 - File paths to review artifacts
+- The output file path for this reviewer (e.g., `.planning/reviews/iteration-N/gemini-review.md`)
 
 ### CLI Invocation Rules
 
@@ -76,15 +82,14 @@ claude -p "<review prompt referencing file paths>" --output-format text
 
 ## Parallel Execution and Fallback
 
-**HARD RULE: For Adversarial tier, both CLIs MUST run simultaneously in a single Bash call using background jobs (`&`) and `wait`. NEVER invoke them sequentially in separate Bash calls.**
+**HARD RULE: For Adversarial and Partial tiers, spawn reviewer subagents in PARALLEL via multiple Task tool calls in a single message. NEVER spawn them sequentially.**
 
-1. **Adversarial tier**: Launch gemini and codex simultaneously as background jobs in ONE Bash call.
-2. **Wait for both**: Collect exit codes.
-3. **Retry on failure**: If a CLI exits with error, retry once. If retry fails, skip and note in output.
-4. **Fallback**: If both external CLIs fail, invoke claude as fallback.
-5. **Collect results**: Merge all successful reviewer outputs, tagged with source.
-
-The `external-reviewer` agent has the complete parallel invocation script. This ensures review proceeds even when individual CLIs are broken, and maximizes throughput by running reviewers concurrently.
+1. **Adversarial tier**: Spawn two `external-reviewer` subagents simultaneously — one for gemini, one for codex.
+2. **Partial tier**: Spawn two subagents simultaneously — one for the available external CLI, one for claude.
+3. **Self-Reflection tier**: Spawn one subagent for claude.
+4. **Retry on failure**: Each subagent retries its CLI once on failure. If retry fails, the subagent reports a skip.
+5. **Fallback**: If both external CLI subagents report failure, spawn a single claude fallback subagent.
+6. **Collect results**: After all subagents return, merge their review outputs tagged with source.
 
 ## Review Output Format
 

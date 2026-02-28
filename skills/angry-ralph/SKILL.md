@@ -95,9 +95,11 @@ angry-ralph: Review tier — <TIER_LABEL>
 Reviewers: <comma-separated list of active reviewers>
 ```
 
-Read the `review_tier` and `available_reviewers` from `.ralph-state/pipeline.json` to determine which reviewers to use. Spawn the `external-reviewer` subagent, passing the active tier and available reviewers in the prompt. Before each iteration, create the review output directory: `.planning/reviews/iteration-N/`.
+Read the `review_tier` and `available_reviewers` from `.ralph-state/pipeline.json` to determine which reviewers to use. Before each iteration, create the review output directory: `.planning/reviews/iteration-N/`.
 
-The subagent produces structured markdown with `## Findings` (tagged with source attribution `[Gemini]`, `[Codex]`, or `[Claude-Reflection]` AND severity `[CRITICAL]`, `[WARNING]`, `[INFO]`), `## Questions`, and `## Summary`.
+**Parallel reviewer dispatch**: For Adversarial tier, spawn TWO `external-reviewer` subagents in parallel via the Task tool — one assigned to gemini, one assigned to codex. Each subagent invokes its single CLI and writes output to the iteration directory. For Partial tier, spawn two subagents in parallel (one external CLI, one claude). For Self-Reflection tier, spawn one subagent (claude only). After all subagents return, collect and merge their results. If both external CLIs fail, spawn a single claude fallback subagent.
+
+Each subagent produces structured markdown with `## Findings` (tagged with source attribution `[Gemini]`, `[Codex]`, or `[Claude-Reflection]` AND severity `[CRITICAL]`, `[WARNING]`, `[INFO]`), `## Questions`, and `## Summary`.
 
 ### Triage Decision Tree
 

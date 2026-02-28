@@ -14,19 +14,17 @@ Initiate the final review only after ALL of the following conditions are met:
 
 ## How to Execute
 
-1. Create the final review output directory: `mkdir -p .planning/reviews/final/`
-2. Write the exact prompts being sent to each reviewer to `.planning/reviews/final/prompts.md` (see review-protocol.md for format).
-3. Spawn the `external-reviewer` subagent via the Task tool.
-4. Provide the subagent with the following inputs:
+1. Create the final review output directory: `mkdir -p .planning/reviews/final/iteration-N/`
+2. Write the exact prompts being sent to each reviewer to `.planning/reviews/final/iteration-N/prompts.md` (see review-protocol.md for format).
+3. Spawn `external-reviewer` subagents in PARALLEL via the Task tool — one per reviewer. For Adversarial tier, spawn two subagents simultaneously (one for gemini, one for codex) in a single message with two Task tool calls. For Partial tier, spawn two subagents simultaneously (one external CLI, one claude). For Self-Reflection, spawn one subagent (claude only).
+4. Provide each subagent with:
+   - Which single reviewer to invoke (gemini, codex, or claude)
    - Review type: `"final integration review"`
-   - Active review tier and available reviewers (from `.ralph-state/pipeline.json`)
    - Project directory path (absolute)
    - Plan file path: `.planning/angry-ralph-plan.md`
    - Sections directory: `.planning/sections/`
-4. The subagent invokes the available reviewers based on the active tier:
-   - **Adversarial tier**: gemini + codex CLIs
-   - **Partial tier**: available external CLI + claude fallback
-   - **Self-Reflection tier**: claude fallback only
+   - Output file path (e.g., `.planning/reviews/final/iteration-N/gemini-review.md`)
+5. After all subagents return, collect and merge their review outputs. If both external CLIs failed, spawn a single claude fallback subagent.
 
 ## Review Tier Transparency
 
@@ -65,8 +63,8 @@ max_iterations = max_review_iterations from .ralph-state/pipeline.json (default 
 
 while iteration < max_iterations:
     create review directory: .planning/reviews/final/iteration-{iteration + 1}/
-    spawn external-reviewer subagent
-    receive review payload
+    spawn external-reviewer subagents in parallel (one per reviewer)
+    collect and merge review outputs
     triage all findings per the decision tree below
     if no CRITICAL and no actionable WARNING:
         break  # clean review — proceed to completion
@@ -101,7 +99,7 @@ When triaging, consider the source: findings from external models carry higher a
 
 ### Re-Review Verification
 
-Each re-review iteration spawns a fresh external-reviewer subagent. The reviewer sees the current codebase state (including prior fixes). This ensures:
+Each re-review iteration spawns fresh external-reviewer subagents in parallel (one per reviewer). Each reviewer sees the current codebase state (including prior fixes). This ensures:
 - Fixes actually resolved the identified issues
 - Fixes didn't introduce new CRITICAL issues
 - Cross-cutting concerns are re-evaluated in light of changes
