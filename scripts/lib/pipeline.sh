@@ -24,6 +24,11 @@ pipeline_init() {
   local project_dir="$1"
   mkdir -p "$project_dir/.ralph-state/phases"
   ensure_gitignore "$project_dir"
+
+  # Safety net: if pipeline.json was created at project root by mistake, move it
+  if [ -f "$project_dir/pipeline.json" ] && [ ! -f "$project_dir/.ralph-state/pipeline.json" ]; then
+    mv "$project_dir/pipeline.json" "$project_dir/.ralph-state/pipeline.json"
+  fi
 }
 
 # Create pipeline.json with initial config.
@@ -187,34 +192,6 @@ remove_done() {
   rm -f "$project_dir/.ralph-state/phases/${name}.done"
 }
 
-# Migrate legacy state files to .ralph-state/.
-# $1 = project directory
-# Returns: "migrated" if migration happened, "none" if nothing to migrate.
-migrate_legacy() {
-  local project_dir="$1"
-  local did_migrate="none"
-
-  if [ -f "$project_dir/.claude/angry-ralph.local.md" ] && [ ! -d "$project_dir/.ralph-state" ]; then
-    mkdir -p "$project_dir/.ralph-state"
-    mv "$project_dir/.claude/angry-ralph.local.md" "$project_dir/.ralph-state/loop.md"
-    did_migrate="migrated"
-  fi
-
-  if [ -f "$project_dir/planning/config.json" ] && [ ! -f "$project_dir/.ralph-state/pipeline.json" ]; then
-    mkdir -p "$project_dir/.ralph-state"
-    cp "$project_dir/planning/config.json" "$project_dir/.ralph-state/pipeline.json"
-    did_migrate="migrated"
-  fi
-
-  # Migrate planning/ → .planning/ (v0.2.0 → v0.3.0)
-  if [ -d "$project_dir/planning" ] && [ ! -d "$project_dir/.planning" ]; then
-    mv "$project_dir/planning" "$project_dir/.planning"
-    did_migrate="migrated"
-  fi
-
-  echo "$did_migrate"
-}
-
 # Print pipeline status summary.
 # $1 = project directory
 pipeline_status() {
@@ -272,10 +249,9 @@ case "$CMD" in
   check_done)     check_done "$@" ;;
   write_done)     write_done "$@" ;;
   remove_done)    remove_done "$@" ;;
-  migrate)        migrate_legacy "$@" ;;
   status)         pipeline_status "$@" ;;
   *)
-    echo "Usage: pipeline.sh <init|create|read|write|append|remove_from_list|check_done|write_done|remove_done|migrate|status> [args...]"
+    echo "Usage: pipeline.sh <init|create|read|write|append|remove_from_list|check_done|write_done|remove_done|status> [args...]"
     exit 1
     ;;
 esac

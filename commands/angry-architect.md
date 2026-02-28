@@ -28,28 +28,27 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/checks/validate-env.sh
 
 Halt on failure. Confirm git repo.
 
-## 3. Migration
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh migrate .
-```
-
-## 4. Resume Detection
+## 3. Resume Detection
 
 Check `.ralph-state/phases/architect.done`:
 - If exists → "Phases 1-2 already complete. Plan at .planning/angry-ralph-plan.md." Stop.
 - If `.ralph-state/pipeline.json` exists with `current_phase` beyond `plan` → offer resume.
 
-## 5. Setup
+## 4. Setup
+
+Run these Bash commands exactly as written. Do NOT create pipeline.json or directories manually — the script handles paths, gitignore, and JSON structure:
 
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh create . "<SPEC_FILE>" "<MODE>" "<MAX_REVIEW>" "<MAX_SECTION_REVIEW>" "<MAX_TDD>" "<REVIEW_TIER>" "<AVAILABLE_REVIEWERS>"
+```
+
+```bash
 mkdir -p .planning/reviews .planning/sections
 ```
 
-Set `<MODE>` to `auto` if `--auto` passed, otherwise `interactive`.
+Set `<MODE>` to `auto` if `--auto` passed, otherwise `interactive`. The script creates `.ralph-state/pipeline.json` — never create this file directly.
 
-## 6. Execute Phases 1-2
+## 5. Execute Phases 1-2
 
 Follow the angry-ralph skill's Phase 1 (DECOMPOSE) and Phase 2 (PLAN) instructions.
 

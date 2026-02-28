@@ -116,33 +116,7 @@ bash "$PIPELINE" remove_done "$TEST_DIR" "architect"
 bash "$PIPELINE" check_done "$TEST_DIR" "architect" && DONE="true" || DONE="false"
 assert_eq "check_done false after remove" "false" "$DONE"
 
-# ---- Test 10: migrate_legacy moves state file ----
-LEGACY_DIR=$(mktemp -d)
-mkdir -p "$LEGACY_DIR/.claude"
-echo "---
-active: true
-phase: execute
----
-prompt body" > "$LEGACY_DIR/.claude/angry-ralph.local.md"
-
-mkdir -p "$LEGACY_DIR/planning"
-echo '{"current_phase": "execute"}' > "$LEGACY_DIR/planning/config.json"
-
-RESULT=$(bash "$PIPELINE" migrate "$LEGACY_DIR")
-assert_eq "migrate returns migrated" "migrated" "$RESULT"
-assert_eq "loop.md exists after migrate" "true" "$([ -f "$LEGACY_DIR/.ralph-state/loop.md" ] && echo true || echo false)"
-assert_eq "pipeline.json exists after migrate" "true" "$([ -f "$LEGACY_DIR/.ralph-state/pipeline.json" ] && echo true || echo false)"
-assert_eq "legacy state file removed" "false" "$([ -f "$LEGACY_DIR/.claude/angry-ralph.local.md" ] && echo true || echo false)"
-rm -rf "$LEGACY_DIR"
-
-# ---- Test 11: migrate_legacy is idempotent ----
-NO_LEGACY_DIR=$(mktemp -d)
-mkdir -p "$NO_LEGACY_DIR/.ralph-state"
-RESULT=$(bash "$PIPELINE" migrate "$NO_LEGACY_DIR")
-assert_eq "migrate returns none when nothing to do" "none" "$RESULT"
-rm -rf "$NO_LEGACY_DIR"
-
-# ---- Test 12: pipeline_create with auto mode ----
+# ---- Test 10: pipeline_create with auto mode ----
 AUTO_DIR=$(mktemp -d)
 bash "$PIPELINE" create "$AUTO_DIR" "/tmp/spec.md" "auto" "5" "3" "30" "partial" "codex"
 MODE=$(bash "$PIPELINE" read "$AUTO_DIR" "mode")
@@ -151,33 +125,11 @@ CAP=$(bash "$PIPELINE" read "$AUTO_DIR" "max_review_iterations")
 assert_eq "custom max_review" "5" "$CAP"
 rm -rf "$AUTO_DIR"
 
-# ---- Test 13: migrate planning/ → .planning/ ----
-PLAN_MIG_DIR=$(mktemp -d)
-mkdir -p "$PLAN_MIG_DIR/planning/sections"
-echo "plan content" > "$PLAN_MIG_DIR/planning/angry-ralph-plan.md"
-echo "section" > "$PLAN_MIG_DIR/planning/sections/section-01.md"
-mkdir -p "$PLAN_MIG_DIR/.ralph-state"
-RESULT=$(bash "$PIPELINE" migrate "$PLAN_MIG_DIR")
-assert_eq "migrate planning/ returns migrated" "migrated" "$RESULT"
-assert_eq ".planning/ exists after migrate" "true" "$([ -d "$PLAN_MIG_DIR/.planning" ] && echo true || echo false)"
-assert_eq "planning/ removed after migrate" "false" "$([ -d "$PLAN_MIG_DIR/planning" ] && echo true || echo false)"
-assert_eq ".planning/sections preserved" "true" "$([ -f "$PLAN_MIG_DIR/.planning/sections/section-01.md" ] && echo true || echo false)"
-rm -rf "$PLAN_MIG_DIR"
-
-# ---- Test 13b: migrate planning/ is idempotent when .planning/ exists ----
-PLAN_BOTH_DIR=$(mktemp -d)
-mkdir -p "$PLAN_BOTH_DIR/planning"
-mkdir -p "$PLAN_BOTH_DIR/.planning"
-mkdir -p "$PLAN_BOTH_DIR/.ralph-state"
-RESULT=$(bash "$PIPELINE" migrate "$PLAN_BOTH_DIR")
-assert_eq "migrate skips when .planning/ exists" "none" "$RESULT"
-rm -rf "$PLAN_BOTH_DIR"
-
-# ---- Test 14: pipeline_read on missing file returns empty ----
+# ---- Test 11: pipeline_read on missing file returns empty ----
 EMPTY=$(bash "$PIPELINE" read "/nonexistent" "mode")
 assert_eq "read on missing returns empty" "" "$EMPTY"
 
-# ---- Test 15: pipeline_write can add arbitrary new fields ----
+# ---- Test 12: pipeline_write can add arbitrary new fields ----
 DIAG_DIR=$(mktemp -d)
 bash "$PIPELINE" create "$DIAG_DIR" "/tmp/spec.md" "interactive" "3" "2" "20" "adversarial" "gemini,codex"
 bash "$PIPELINE" write "$DIAG_DIR" "problem_description" "API returns 500 on large payloads"

@@ -73,17 +73,7 @@ If not in a git repo:
 - **`--auto` mode**: Run `git init` automatically. No prompt needed.
 - **Interactive mode**: Ask whether to `git init`. Do not initialize without consent.
 
-## 3. Backwards Compatibility Migration
-
-Run the migration check via the Bash tool:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh migrate .
-```
-
-If output is `migrated`, inform user: "Migrated legacy state to .ralph-state/".
-
-## 4. Resume Detection via .done Markers
+## 3. Resume Detection via .done Markers
 
 Check `.ralph-state/` for prior state:
 
@@ -99,7 +89,7 @@ If prior state detected:
 
 If start fresh: `rm -rf .ralph-state/ .planning/` and continue.
 
-## 5. Setup
+## 4. Setup
 
 Run these two Bash commands exactly as written. Do NOT create pipeline.json or directories manually — the script handles paths, gitignore, and JSON structure:
 
@@ -113,7 +103,7 @@ mkdir -p .planning/reviews .planning/sections
 
 Where `<MODE>` is `auto` if `--auto` was passed, otherwise `interactive`. Substitute actual values for all placeholders. The script creates `.ralph-state/pipeline.json` — never create this file directly.
 
-## 6. Handoff to Skill
+## 5. Handoff to Skill
 
 The angry-ralph skill handles the full 6-phase workflow. Begin Phase 1 immediately.
 

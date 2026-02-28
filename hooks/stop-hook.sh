@@ -9,6 +9,21 @@
 # -e is intentionally omitted to prevent silent non-zero exits.
 set -uo pipefail
 
+# ---- FAST PATH: read stdin and check state file before loading anything ----
+# This minimizes overhead when no angry-ralph pipeline is active.
+INPUT=$(cat) || INPUT=""
+
+CWD=$(echo "$INPUT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('cwd',''))" 2>/dev/null) || { exit 0; }
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$CWD}"
+STATE_FILE="$PROJECT_DIR/.ralph-state/loop.md"
+
+# No state file → allow exit immediately (most common case)
+if [ ! -f "$STATE_FILE" ]; then
+  exit 0
+fi
+
+# ---- STATE FILE EXISTS: load dependencies and proceed with gating logic ----
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STATE_SH="$SCRIPT_DIR/../scripts/lib/state.sh"
 
@@ -18,25 +33,10 @@ if [ ! -f "$STATE_SH" ]; then
 fi
 source "$STATE_SH"
 
-# Read hook input JSON from stdin
-INPUT=$(cat) || INPUT=""
-
-# Parse CWD, transcript path, and event name. If JSON parsing fails, allow exit —
-# no active loop can be gated without valid hook input.
-CWD=$(echo "$INPUT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('cwd',''))" 2>/dev/null) || { exit 0; }
 TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('transcript_path',''))" 2>/dev/null) || { exit 0; }
 HOOK_EVENT=$(echo "$INPUT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('hook_event_name',''))" 2>/dev/null) || HOOK_EVENT=""
 
-# Determine project dir (CLAUDE_PROJECT_DIR override for testing, else CWD)
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$CWD}"
-STATE_FILE="$PROJECT_DIR/.ralph-state/loop.md"
-
-# 1. No state file → allow exit
-if [ ! -f "$STATE_FILE" ]; then
-  exit 0
-fi
-
-# 2. Read state fields (fail-open: if reads fail, defaults allow exit at step 3/4)
+# Read state fields (fail-open: if reads fail, defaults allow exit at step 3/4)
 ACTIVE=$(read_state_field "$STATE_FILE" "active") || ACTIVE=""
 PHASE=$(read_state_field "$STATE_FILE" "phase") || PHASE=""
 ITERATION=$(read_state_field "$STATE_FILE" "iteration") || ITERATION="0"
@@ -56,17 +56,17 @@ except: print('')
 " "$CONFIG_FILE" 2>/dev/null) || true
 fi
 
-# 3. If active=false → allow exit
+# If active=false → allow exit
 if [ "$ACTIVE" != "true" ]; then
   exit 0
 fi
 
-# 4. If phase is NOT "execute" → allow exit
+# If phase is NOT "execute" → allow exit
 if [ "$PHASE" != "execute" ]; then
   exit 0
 fi
 
-# 4b. Empty promise guard — if promise is blank/null, block (never bypass loop)
+# Empty promise guard — if promise is blank/null, block (never bypass loop)
 if [ -z "$COMPLETION_PROMISE" ]; then
   python3 -c "
 import json
@@ -79,7 +79,7 @@ print(json.dumps({
   exit 0
 fi
 
-# 5. Phase IS "execute": check if completion promise appears in transcript
+# Phase IS "execute": check if completion promise appears in transcript
 # Uses python3 to parse JSONL backwards (no tac dependency).
 # Handles both flat format (role/content at top level) and nested format
 # (message.role/message.content) used by real Claude transcripts.
@@ -147,12 +147,12 @@ print(json.dumps({
   esac
 fi
 
-# 6. If promise found → allow exit
+# If promise found → allow exit
 if [ "$PROMISE_FOUND" = "true" ]; then
   exit 0
 fi
 
-# 6a. SubagentStop scope guard — if this is a SubagentStop event and the promise
+# SubagentStop scope guard — if this is a SubagentStop event and the promise
 # doesn't appear ANYWHERE in the transcript, this subagent was never told about the
 # promise (e.g., review subagent, external reviewer). Allow exit — not a TDD subagent.
 if [ "$HOOK_EVENT" = "SubagentStop" ] && [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
@@ -171,7 +171,7 @@ except:
   fi
 fi
 
-# 6b. Check TDD iteration cap — if iteration >= cap, allow exit with cap_reached signal
+# Check TDD iteration cap — if iteration >= cap, allow exit with cap_reached signal
 if [ -n "$MAX_TDD_ITERATIONS" ] && [ "$ITERATION" -ge "$MAX_TDD_ITERATIONS" ] 2>/dev/null; then
   python3 -c "
 import json
@@ -185,7 +185,7 @@ print(json.dumps({
   exit 0
 fi
 
-# 7. Promise NOT found → block exit: increment iteration, output blocking JSON
+# Promise NOT found → block exit: increment iteration, output blocking JSON
 NEW_ITERATION=$((ITERATION + 1))
 write_state_field "$STATE_FILE" "iteration" "$NEW_ITERATION" || true
 

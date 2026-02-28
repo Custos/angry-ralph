@@ -68,17 +68,7 @@ If not in a git repo:
 - **`--auto` mode**: Run `git init` automatically.
 - **Interactive mode**: Ask whether to `git init`.
 
-## 3. Backwards Compatibility Migration
-
-Run the migration check:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/lib/pipeline.sh migrate .
-```
-
-If output is `migrated`, inform user.
-
-## 4. Resume Detection
+## 3. Resume Detection
 
 Check `.ralph-state/` for prior diagnosis state:
 
@@ -95,7 +85,7 @@ If start fresh: `rm -rf .ralph-state/ .planning/diagnosis/` and continue.
 
 If prior state exists but `mode` is NOT `"diagnose"` (e.g., an angry-ralph pipeline is active): warn the user and ask whether to proceed (this will create diagnosis artifacts alongside existing pipeline artifacts).
 
-## 5. Setup
+## 4. Setup
 
 Create pipeline state. Use the existing `pipeline.sh create` with the problem description as the spec_file field, then override diagnosis-specific fields:
 
@@ -119,7 +109,7 @@ Create the diagnosis artifacts directory:
 mkdir -p .planning/diagnosis/reviews
 ```
 
-## 6. Handoff to Skill
+## 5. Handoff to Skill
 
 Begin Phase 1 (INVESTIGATE) immediately. Follow the diagnosis protocol at `references/diagnosis-protocol.md`.
 
