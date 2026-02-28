@@ -312,6 +312,42 @@ Deactivate the state file by setting `active=false` or removing it entirely. Upd
 
 Consult `references/final-review-protocol.md` for the complete final review loop, triage decision tree, fix rules, and completion steps.
 
+## Diagnosis Mode (/angry-diagnose)
+
+When invoked via `/angry-diagnose`, the pipeline runs a 4-phase diagnosis workflow instead of the standard 6-phase spec-to-code pipeline. The command file handles setup and creates pipeline.json with `mode: "diagnose"`.
+
+### Phase 1: INVESTIGATE
+
+Build a case file from the user's problem description and any provided context files. Gather relevant source files, trace dependencies, check recent git history, and optionally interview the user.
+
+Output: `.planning/diagnosis/case-file.md`
+
+### Phase 2: DIAGNOSE (Differential Diagnosis)
+
+Spawn the `external-reviewer` subagent with a diagnosis-specific prompt (not the standard plan/code review prompt). Each reviewer generates at least 3 competing hypotheses for the root cause, including at least 1 non-obvious hypothesis. Merge, deduplicate, rank by consensus and evidence strength, cap at `max_hypotheses`.
+
+Output: `.planning/diagnosis/hypotheses.md`
+
+### Phase 3: FIX (Hypothesis-Driven TDD)
+
+For each hypothesis in rank order, write a diagnostic test designed to prove/disprove it. Run the test: if it fails, the hypothesis is confirmed; if it passes, it's eliminated. Once a root cause is confirmed, implement the minimum fix to make the failing diagnostic test pass. Run full test suite.
+
+Output: `.planning/diagnosis/fix-report.md`
+
+### Phase 4: VERIFY (Adversarial Verification)
+
+Run mechanical gates (stub check + test verify, skip spec compliance). Spawn `external-reviewer` with a verification prompt challenging the fix. Triage findings per `references/review-protocol.md`. Atomic commit on success.
+
+### Detailed Procedure
+
+Consult `references/diagnosis-protocol.md` for the complete diagnosis procedure, including:
+- Case file structure and context gathering rules
+- Diagnosis prompt template for external reviewers
+- Hypothesis merge/rank/cap algorithm
+- Systematic elimination via diagnostic tests
+- Fix report format
+- Verification prompt and iteration control
+
 ## State Management
 
 ### State File (Ralph Loop)
