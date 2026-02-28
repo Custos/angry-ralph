@@ -1,7 +1,7 @@
 ---
 name: angry-ralph
 description: This skill should be used when the user asks to "run angry-ralph", "plan and implement a feature", "start the planning pipeline", "decompose and build", "diagnose a bug adversarially", "find the root cause", "differential diagnosis", or invokes the /angry-ralph or /angry-diagnose commands. Orchestrates a 6-phase pipeline from decomposition through adversarial multi-LLM review to TDD execution via Ralph Loop, or a 4-phase adversarial diagnosis workflow for bug investigation.
-version: 0.5.0
+version: 0.5.1
 ---
 
 # angry-ralph: Master Orchestration Skill
