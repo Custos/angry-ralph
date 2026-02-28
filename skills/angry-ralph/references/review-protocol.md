@@ -125,11 +125,11 @@ Store review outputs at:
 - `.planning/reviews/iteration-N/claude-review.md` -- Claude fallback output (when used).
 - `.planning/reviews/iteration-N/prompts.md` -- The exact prompts sent to each reviewer.
 
-For the final review (Phase 6), store in:
-- `.planning/reviews/final/gemini-review.md`
-- `.planning/reviews/final/codex-review.md`
-- `.planning/reviews/final/claude-review.md`
-- `.planning/reviews/final/prompts.md`
+For the final review (Phase 6), store in iteration subdirectories:
+- `.planning/reviews/final/iteration-N/gemini-review.md`
+- `.planning/reviews/final/iteration-N/codex-review.md`
+- `.planning/reviews/final/iteration-N/claude-review.md`
+- `.planning/reviews/final/iteration-N/prompts.md`
 
 ### Prompt Log Format
 

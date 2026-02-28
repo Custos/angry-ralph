@@ -97,6 +97,7 @@ The current working directory should be a git repo (or angry-ralph will offer to
 | `/angry-review [plan\|code\|section <name>]` | Adversarial review — pipeline Phase 3 or on-demand |
 | `/angry-execute [--auto] [--rebuild <section>]` | Run Phases 4-6 (split, TDD execute, final review) |
 | `/angry-fix [context] [prompt]` | Surgical TDD strike on a specific file or bug |
+| `/angry-diagnose [@ctx] "problem"` | Adversarial bug diagnosis with differential diagnosis and TDD fix |
 | `/cancel-ralph` | Cancel an active Ralph Loop and remove state |
 | `/angry-status` | Show current pipeline state (read-only) |
 
@@ -116,6 +117,7 @@ All commands are thin wrappers that delegate to `scripts/lib/pipeline.sh` and `s
 │   ├── angry-review.md          # Phase 3 + on-demand review
 │   ├── angry-execute.md         # Phases 4-6: split, TDD, final review
 │   ├── angry-fix.md             # Surgical TDD strike
+│   ├── angry-diagnose.md        # Adversarial bug diagnosis
 │   ├── angry-status.md          # Pipeline state display
 │   └── cancel-ralph.md          # Loop cancellation
 ├── hooks/
@@ -137,7 +139,8 @@ All commands are thin wrappers that delegate to `scripts/lib/pipeline.sh` and `s
 │           ├── tdd-protocol.md
 │           ├── loop-protocol.md
 │           ├── section-review-protocol.md
-│           └── final-review-protocol.md
+│           ├── final-review-protocol.md
+│           └── diagnosis-protocol.md
 └── tests/
     ├── test-state.sh
     ├── test-validate-env.sh
@@ -202,7 +205,7 @@ Or all at once:
 for t in tests/test-*.sh; do echo "=== $t ==="; bash "$t"; echo; done
 ```
 
-**138 tests** across 6 suites covering state management, environment validation, stop hook behavior (fail-closed on corrupt transcripts, promise swap gating, TDD iteration cap), plugin structure integrity, mechanical gates (stub grep, test verification, spec compliance), and pipeline state engine (JSON config, .done markers, phase transitions).
+**151 tests** across 6 suites covering state management, environment validation, stop hook behavior (fail-closed on corrupt transcripts, promise swap gating, TDD iteration cap), plugin structure integrity, mechanical gates (stub grep, test verification, spec compliance), and pipeline state engine (JSON config, .done markers, phase transitions).
 
 ## Planning Artifacts
 
@@ -212,9 +215,10 @@ When angry-ralph runs, it creates two hidden, gitignored directories for runtime
 .ralph-state/
 ├── pipeline.json               # Session config (phase, mode, sections, timestamps)
 ├── loop.md                     # TDD loop state (YAML frontmatter + prompt body)
-├── architect.done              # Phase completion marker
-├── review.done                 # Phase completion marker
-└── execute.done                # Phase completion marker
+└── phases/
+    ├── architect.done           # Phases 1-2 completion marker
+    ├── review.done              # Phase 3 completion marker
+    └── execute.done             # Phases 4-6 completion marker
 
 .planning/
 ├── angry-ralph-plan.md         # The implementation plan

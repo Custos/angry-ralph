@@ -1,7 +1,7 @@
 ---
 name: angry-ralph
-description: This skill should be used when the user asks to "run angry-ralph", "plan and implement a feature", "start the planning pipeline", "decompose and build", or invokes the /angry-ralph command. Orchestrates a 6-phase pipeline from decomposition through adversarial multi-LLM review to TDD execution via Ralph Loop.
-version: 0.1.0
+description: This skill should be used when the user asks to "run angry-ralph", "plan and implement a feature", "start the planning pipeline", "decompose and build", "diagnose a bug adversarially", "find the root cause", "differential diagnosis", or invokes the /angry-ralph or /angry-diagnose commands. Orchestrates a 6-phase pipeline from decomposition through adversarial multi-LLM review to TDD execution via Ralph Loop, or a 4-phase adversarial diagnosis workflow for bug investigation.
+version: 0.4.0
 ---
 
 # angry-ralph: Master Orchestration Skill
@@ -205,6 +205,8 @@ Output the completion promise `SECTION_COMPLETE` only when ALL of the following 
 
 If the SubagentStop hook detects that `iteration >= max_tdd_iterations` (from `.ralph-state/pipeline.json`, default 20), it allows exit with a `tdd_cap_reached` signal instead of blocking. The main session then asks the user via `AskUserQuestion`: "Section X failed after N TDD iterations. Review errors, skip section, or keep trying (+10 iterations)?"
 
+**--auto mode**: Skip confirmation prompts. Auto-resolve TDD cap by adding 10 iterations and re-dispatching. Auto-resolve commit failures by retrying once, then skipping on second failure.
+
 - **Skip section**: Mark the section as `failed` in `.planning/sections/index.md` and advance to the next section.
 - **Keep trying**: Add 10 to `max_tdd_iterations` in `.ralph-state/pipeline.json` and re-dispatch the subagent.
 - **Review errors**: Display the last test output for user inspection before deciding.
@@ -305,6 +307,8 @@ When `max_review_iterations` is exhausted with findings still open:
 - The unresolved file serves as a production roadmap
 
 ### Pipeline Completion
+
+**--auto mode**: Run the full review-fix-review loop and log all findings, but do NOT pause for human approval. Auto-accept and proceed to completion. Genuine ambiguity questions are answered with secure defaults.
 
 Produce a summary report at `.planning/reviews/final/review-summary.md`: total iterations, findings per severity, fixes with commits, unresolved items.
 
