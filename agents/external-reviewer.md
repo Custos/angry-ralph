@@ -60,6 +60,8 @@ For plan review:
 ```bash
 gemini -m gemini-3.1-pro-preview -p "You are a senior architect performing adversarial review. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
 
+IMPORTANT: Do NOT enter plan mode. Do NOT attempt to use write_file or exit_plan_mode. Read files and output your findings directly to stdout.
+
 METHODOLOGY:
 1. For every file path, function name, or dependency the plan references, verify it actually exists in the project. Flag phantom references.
 2. For every step, trace the FAILURE path: what happens when this step fails? Is there recovery or does the pipeline silently break?
@@ -69,12 +71,14 @@ METHODOLOGY:
 
 The implementation plan is at $(pwd)/.planning/angry-ralph-plan.md. Read it, then read the files it references.
 
-Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --approval-mode plan -o text
+Output structured markdown directly to stdout: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --sandbox read-only -o text
 ```
 
 For final code review:
 ```bash
 gemini -m gemini-3.1-pro-preview -p "You are a senior architect performing adversarial integration review. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
+
+IMPORTANT: Do NOT enter plan mode. Do NOT attempt to use write_file or exit_plan_mode. Read files and output your findings directly to stdout.
 
 METHODOLOGY:
 1. Read individual scripts, functions, and modules. Verify each one actually implements what its docs/comments claim.
@@ -86,10 +90,10 @@ METHODOLOGY:
 
 The plan is at $(pwd)/.planning/angry-ralph-plan.md. The codebase is at $(pwd). Read the actual files.
 
-Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --approval-mode plan -o text
+Output structured markdown directly to stdout: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes), ## Questions, ## Summary." --sandbox read-only -o text
 ```
 
-- Use `--approval-mode plan` to enforce read-only operation.
+- Use `--sandbox read-only` to enforce read-only operation (avoids plan mode deadlock with `--approval-mode plan`).
 - Use `-o text` to capture plain text output.
 
 ### Codex (when available)

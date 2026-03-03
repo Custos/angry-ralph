@@ -53,10 +53,10 @@ Pass file paths as arguments to all CLIs. **Never pipe content via stdin.**
 #### Gemini Invocation (when available)
 
 ```
-gemini -m gemini-3.1-pro-preview -p "<review prompt referencing file paths>" --approval-mode plan -o text
+gemini -m gemini-3.1-pro-preview -p "<review prompt referencing file paths>" --sandbox read-only -o text
 ```
 
-- Use `--approval-mode plan` to enforce read-only operation.
+- Use `--sandbox read-only` to enforce read-only operation (avoids plan mode deadlock with `--approval-mode plan`).
 - Use `-o text` to capture plain text output.
 - Reference the plan file by absolute path: `$(pwd)/.planning/angry-ralph-plan.md`.
 
