@@ -73,7 +73,7 @@ codex exec --model gpt-5.3-codex "<review prompt referencing file paths>" -C "$(
 #### Claude Fallback Invocation (when used)
 
 ```
-claude -p "<review prompt referencing file paths>" --output-format text
+claude -m claude-opus-4-6 -p "<review prompt referencing file paths>" --output-format text
 ```
 
 - Use `--output-format text` to get plain text output.

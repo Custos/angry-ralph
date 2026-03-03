@@ -138,7 +138,7 @@ Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes)
 
 For plan review:
 ```bash
-claude -p "You are a senior architect performing adversarial review in a SEPARATE session with NO prior context. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
+claude -m claude-opus-4-6 -p "You are a senior architect performing adversarial review in a SEPARATE session with NO prior context. Your job is to BREAK this plan, not validate it. Do NOT review the plan in isolation — cross-reference against the actual codebase.
 
 METHODOLOGY:
 1. For every file path, function name, or dependency the plan references, verify it actually exists in the project. Flag phantom references.
@@ -156,7 +156,7 @@ Output structured markdown: ## Findings ([CRITICAL], [WARNING], [INFO] prefixes)
 
 For final code review:
 ```bash
-claude -p "You are a senior architect performing adversarial integration review in a SEPARATE session with NO prior context. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
+claude -m claude-opus-4-6 -p "You are a senior architect performing adversarial integration review in a SEPARATE session with NO prior context. Your job is to BREAK this implementation, not validate it. Do NOT skim the directory structure and review architecture — inspect at the unit level.
 
 METHODOLOGY:
 1. Read individual scripts, functions, and modules. Verify each one actually implements what its docs/comments claim.
