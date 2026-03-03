@@ -8,7 +8,7 @@
       "name": "angry-ralph",
       "source": "./",
       "description": "Unified multi-LLM planning with adversarial review and TDD execution via Ralph Loop",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "author": {
         "name": "jfeinblum"
       },
